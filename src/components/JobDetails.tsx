@@ -1,9 +1,63 @@
-import React, { useState, useEffect } from 'react';
-import { Download, FileCode, CheckCircle2, AlertCircle, Clock, FileText, ChevronRight, ChevronDown } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Download, FileCode, CheckCircle2, AlertCircle, Clock, FileText, ChevronRight, ChevronDown, Sparkles, Shield } from 'lucide-react';
 import { JobRecord, getDownloadUrl, generateReport } from '../services/api';
 
 interface JobDetailsProps {
   job: JobRecord | null;
+}
+
+function parseReportDetails(summaryText: string) {
+  const sections = {
+    statistics: [] as string[],
+    healedIssues: [] as string[],
+    manualReviews: [] as string[],
+    validationGates: [] as string[],
+  };
+
+  if (!summaryText) return sections;
+
+  const lines = summaryText.split("\n");
+  let currentSection: "stats" | "healed" | "manual" | "validation" | null = null;
+
+  for (const line of lines) {
+    if (line.includes("📊 Project Statistics:")) {
+      currentSection = "stats";
+      continue;
+    }
+    if (line.includes("🩹 AI Self-Healing Corrections:")) {
+      currentSection = "healed";
+      continue;
+    }
+    if (line.includes("⚠️ Manual Review Items:")) {
+      currentSection = "manual";
+      continue;
+    }
+    if (line.includes("VALIDATION REPORT")) {
+      currentSection = "validation";
+      continue;
+    }
+    if (line.includes("BUILD STATUS")) {
+      currentSection = null;
+      continue;
+    }
+
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    if (currentSection === "stats") {
+      sections.statistics.push(trimmed);
+    } else if (currentSection === "healed") {
+      sections.healedIssues.push(trimmed.replace(/^([✓\+\-\*\s🩹]+)/, ""));
+    } else if (currentSection === "manual") {
+      sections.manualReviews.push(trimmed.replace(/^([✓\+\-\*\s⚠️]+)/, ""));
+    } else if (currentSection === "validation") {
+      if (trimmed.startsWith("✓")) {
+        sections.validationGates.push(trimmed.replace(/^([✓\+\-\*\s]+)/, ""));
+      }
+    }
+  }
+
+  return sections;
 }
 
 export default function JobDetails({ job }: JobDetailsProps) {
@@ -11,10 +65,12 @@ export default function JobDetails({ job }: JobDetailsProps) {
   const [loadingReport, setLoadingReport] = useState(false);
   const [selectedFileIndex, setSelectedFileIndex] = useState<number | null>(null);
   const [showFiles, setShowFiles] = useState(true);
+  const [showRawReport, setShowRawReport] = useState(false);
 
   useEffect(() => {
     setReport(null);
     setSelectedFileIndex(null);
+    setShowRawReport(false);
     if (job && job.status === 'completed') {
       fetchReport();
     }
@@ -47,6 +103,7 @@ export default function JobDetails({ job }: JobDetailsProps) {
 
   const migratedFiles = job.result?.migratedFiles || [];
   const selectedFile = selectedFileIndex !== null ? migratedFiles[selectedFileIndex] : null;
+  const parsedDetails = report ? parseReportDetails(report.summary) : null;
 
   return (
     <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-6">
@@ -99,12 +156,63 @@ export default function JobDetails({ job }: JobDetailsProps) {
           Loading report...
         </div>
       ) : report ? (
-        <div className="border border-gray-100 rounded-xl p-4 space-y-3">
-          <h3 className="text-sm font-bold text-gray-800 flex items-center gap-1.5">
-            <FileText className="w-4 h-4 text-indigo-500" /> Migration Report
+        <div className="border border-gray-100 rounded-xl p-4 space-y-4 shadow-sm">
+          <h3 className="text-sm font-bold text-gray-800 flex items-center gap-1.5 border-b border-gray-50 pb-2">
+            <FileText className="w-4 h-4 text-indigo-500" /> Migration Summary
           </h3>
-          <p className="text-xs text-gray-600 whitespace-pre-line">{report.summary}</p>
-          <div className="grid grid-cols-3 gap-2 pt-2">
+
+          {/* QA Gates */}
+          {parsedDetails && parsedDetails.validationGates.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-[10px] font-bold uppercase text-gray-400 tracking-wider flex items-center gap-1">
+                <Shield className="w-3 h-3 text-emerald-500" /> Quality Gates Status
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
+                {parsedDetails.validationGates.map((gate, i) => (
+                  <div key={i} className="flex items-center gap-1.5 p-2 bg-emerald-50/50 rounded-lg border border-emerald-100/50 text-[11px] text-emerald-800">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                    <span className="font-medium truncate" title={gate}>{gate}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* AI Self-Healing Corrections */}
+          {parsedDetails && parsedDetails.healedIssues.length > 0 && (
+            <div className="space-y-2 pt-1">
+              <h4 className="text-[10px] font-bold uppercase text-gray-400 tracking-wider flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-indigo-500" /> AI Self-Healing Actions
+              </h4>
+              <div className="space-y-1">
+                {parsedDetails.healedIssues.map((issue, i) => (
+                  <div key={i} className="p-2 bg-indigo-50/50 border border-indigo-100/40 rounded-lg text-[11px] text-indigo-900 flex items-start gap-1.5">
+                    <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded text-[8px] font-bold uppercase shrink-0 mt-0.5">HEALED</span>
+                    <span className="leading-relaxed">{issue}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Manual Reviews */}
+          {parsedDetails && parsedDetails.manualReviews.length > 0 && (
+            <div className="space-y-2 pt-1">
+              <h4 className="text-[10px] font-bold uppercase text-gray-400 tracking-wider flex items-center gap-1">
+                <AlertCircle className="w-3 h-3 text-amber-500" /> Action Items Recommended
+              </h4>
+              <div className="space-y-1">
+                {parsedDetails.manualReviews.map((review, i) => (
+                  <div key={i} className="p-2 bg-amber-50/50 border border-amber-100/40 rounded-lg text-[11px] text-amber-900 flex items-start gap-1.5">
+                    <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-[8px] font-bold uppercase shrink-0 mt-0.5">MANUAL</span>
+                    <span className="leading-relaxed">{review}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-gray-50">
             <div className="bg-gray-50 p-2 rounded text-center">
               <span className="block text-lg font-bold text-indigo-600">{report.metrics.migratedFiles}</span>
               <span className="text-[10px] text-gray-400 uppercase">Files</span>
@@ -117,6 +225,21 @@ export default function JobDetails({ job }: JobDetailsProps) {
               <span className="block text-lg font-bold text-rose-600">{report.metrics.errors.length}</span>
               <span className="text-[10px] text-gray-400 uppercase">Errors</span>
             </div>
+          </div>
+
+          <div className="pt-2">
+            <button
+              onClick={() => setShowRawReport(!showRawReport)}
+              className="text-xs font-bold text-gray-400 hover:text-indigo-600 transition-colors flex items-center gap-1"
+            >
+              {showRawReport ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+              {showRawReport ? "Hide Full Compiler Log" : "Show Full Compiler Log"}
+            </button>
+            {showRawReport && (
+              <pre className="mt-2 p-3 bg-gray-50 rounded-lg text-[10px] font-mono text-gray-600 whitespace-pre-wrap border border-gray-100 max-h-[300px] overflow-y-auto leading-relaxed">
+                {report.summary}
+              </pre>
+            )}
           </div>
         </div>
       ) : null}

@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { FileArchive, RefreshCw } from 'lucide-react';
 import UploadZone from './components/UploadZone';
 import JobsList from './components/JobsList';
 import JobDetails from './components/JobDetails';
+import DependencyGraph from './components/DependencyGraph';
 import { getJobs, JobRecord } from './services/api';
 
 export default function App() {
@@ -79,10 +80,12 @@ export default function App() {
           </div>
 
           {/* Right Column: Selected Job Details & Files */}
-          <div className="lg:col-span-7">
+          <div className="lg:col-span-7 space-y-8">
             <JobDetails job={selectedJob} />
+            {selectedJob && selectedJob.status === 'completed' && (
+              <DependencyGraph jobId={selectedJob.id} />
+            )}
           </div>
-
         </div>
       </main>
     </div>
