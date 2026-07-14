@@ -4,6 +4,7 @@ Welcome to the frontend workspace of the **Multi-Framework Code Migration Studio
 
 ---
 
+
 ## 🏛️ Architecture Overview
 
 The frontend follows a **Feature-First Architecture** designed to keep components decoupled, self-contained, and highly maintainable. Business domains are grouped under self-contained directories inside `src/features`, while reusable visual assets, styling rules, and state managers sit in the `src/shared`, `src/app`, and `src/store` hubs.
