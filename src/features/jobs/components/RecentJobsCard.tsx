@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useContext } from 'react';
 import { Activity, Download, ArrowRight, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getDownloadUrl } from '../api';
@@ -10,12 +10,17 @@ import Card from '../../../shared/components/Card';
 import Badge from '../../../shared/components/Badge';
 import { staggerContainer, slideUp, springTransition } from '../../../animations/variants';
 import { useReducedMotion } from '../../../hooks/useReducedMotion';
+import ShortcutContext from '../../../shortcuts/shortcutContext';
 
 const RecentJobsCard = memo(function RecentJobsCard() {
   const dispatch = useAppDispatch();
   const selectedJobId = useAppSelector((state: RootState) => state.workspace.selectedJobId);
   const { jobs, isLoading } = useRecentJobs();
   const isReduced = useReducedMotion();
+
+  const shortcutCtx = useContext(ShortcutContext);
+  const pushContext = shortcutCtx?.pushContext || (() => {});
+  const popContext = shortcutCtx?.popContext || (() => {});
 
   const getIconForStatus = (status: string) => {
     const baseStyle = "w-4 h-4";
@@ -40,6 +45,51 @@ const RecentJobsCard = memo(function RecentJobsCard() {
     );
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const active = document.activeElement as HTMLElement;
+    const items = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('.job-list-item'));
+    if (items.length === 0) return;
+
+    if (active === e.currentTarget) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter') {
+        e.preventDefault();
+        items[0].focus();
+      }
+      return;
+    }
+
+    if (!active.classList.contains('job-list-item')) return;
+    const index = items.indexOf(active);
+
+    switch (e.key) {
+      case 'ArrowDown': {
+        e.preventDefault();
+        const nextIndex = Math.min(items.length - 1, index + 1);
+        items[nextIndex].focus();
+        break;
+      }
+      case 'ArrowUp': {
+        e.preventDefault();
+        const prevIndex = Math.max(0, index - 1);
+        items[prevIndex].focus();
+        break;
+      }
+      case 'Enter': {
+        e.preventDefault();
+        if (e.ctrlKey) {
+          const url = active.getAttribute('data-download-url');
+          if (url) window.location.href = url;
+        } else {
+          const jobId = active.getAttribute('data-job-id');
+          if (jobId) dispatch(setSelectedJobId(jobId));
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  };
+
   return (
     <Card className="flex flex-col flex-1 h-[460px]">
       <div className="flex items-center gap-2 mb-1.5 select-none">
@@ -60,7 +110,15 @@ const RecentJobsCard = memo(function RecentJobsCard() {
           <p className="text-[10px] text-muted-foreground mt-0.5">Start one using the migration panel.</p>
         </div>
       ) : (
-        <div className="flex-1 pr-1 overflow-y-auto max-h-[330px] scrollbar animate-fadeIn">
+        <div 
+          role="list"
+          aria-label="Recent Migrations List"
+          onFocus={() => pushContext('joblist')}
+          onBlur={() => popContext('joblist')}
+          onKeyDown={handleKeyDown}
+          className="flex-1 pr-1 overflow-y-auto max-h-[330px] scrollbar animate-fadeIn outline-none"
+          tabIndex={0}
+        >
           <motion.div 
             variants={staggerContainer}
             initial="hidden"
@@ -80,7 +138,12 @@ const RecentJobsCard = memo(function RecentJobsCard() {
                     whileHover={isReduced ? {} : { scale: 1.015, y: -1, zIndex: 10 }}
                     whileTap={isReduced ? {} : { scale: 0.985 }}
                     onClick={() => dispatch(setSelectedJobId(job.id))}
-                    className={`py-3 px-2.5 flex justify-between items-center group transition-all duration-200 rounded-xl cursor-pointer border ${
+                    tabIndex={0}
+                    role="listitem"
+                    aria-selected={isSelected}
+                    data-job-id={job.id}
+                    data-download-url={getDownloadUrl(job.id)}
+                    className={`job-list-item py-3 px-2.5 flex justify-between items-center group transition-all duration-200 rounded-xl cursor-pointer border focus:outline-none focus:ring-2 focus:ring-primary ${
                       isSelected
                         ? 'bg-primary/5 border-primary/45 shadow-glow'
                         : 'bg-card/25 border-border hover:bg-accent/40'
@@ -115,6 +178,7 @@ const RecentJobsCard = memo(function RecentJobsCard() {
                           onClick={(e) => e.stopPropagation()}
                           className="p-2 bg-[#12131F] text-muted-foreground hover:text-foreground hover:bg-[#1E1F35] rounded-xl border border-border transition-colors shadow-sm"
                           title="Download transformed project"
+                          aria-label="Download ZIP archive"
                         >
                           <Download className="w-3.5 h-3.5" />
                         </a>

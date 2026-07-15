@@ -1,31 +1,42 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Sparkles, LayoutDashboard, Network, ClipboardList, Key, Settings, Trash2, Moon, Sun } from 'lucide-react';
+import { Search, Sparkles, LayoutDashboard, Network, ClipboardList, Key, Settings, Trash2, Moon, Sun, Keyboard } from 'lucide-react';
 import { useAppDispatch } from '../../../store';
 import { setActiveTab } from '../../../store/slices/uiSlice';
 import { setSelectedJobId } from '../../../store/slices/workspaceSlice';
 import { useTheme } from '../../../lib/ThemeContext';
 import { defaultTransition } from '../../../animations/variants';
+import { useGlobalShortcut } from '../../../shortcuts/hooks/useGlobalShortcut';
+import ShortcutContext from '../../../shortcuts/shortcutContext';
 
 export function CommandPalette() {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const dispatch = useAppDispatch();
   const { theme, setTheme } = useTheme();
+  const shortcutCtx = useContext(ShortcutContext);
+  const setIsHelpOpen = shortcutCtx?.setIsHelpOpen || (() => {});
+
+  useGlobalShortcut('toggle-command-palette', () => {
+    setIsOpen((prev) => !prev);
+  });
+
+  useGlobalShortcut('cancel-action', () => {
+    if (isOpen) {
+      setIsOpen(false);
+    }
+  });
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault();
-        setIsOpen((prev) => !prev);
-      }
-      if (e.key === 'Escape') {
-        setIsOpen(false);
-      }
+    if (isOpen && shortcutCtx) {
+      shortcutCtx.pushContext('dialog');
+    } else if (shortcutCtx) {
+      shortcutCtx.popContext('dialog');
+    }
+    return () => {
+      shortcutCtx?.popContext('dialog');
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [isOpen, shortcutCtx]);
 
   const commands = [
     { id: 'dashboard', label: 'Go to Dashboard', icon: LayoutDashboard, action: () => dispatch(setActiveTab('dashboard')) },
@@ -35,6 +46,7 @@ export function CommandPalette() {
     { id: 'apiKeys', label: 'Configure API Keys', icon: Key, action: () => dispatch(setActiveTab('apiKeys')) },
     { id: 'theme-toggle', label: `Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`, icon: theme === 'dark' ? Sun : Moon, action: () => setTheme(theme === 'dark' ? 'light' : 'dark') },
     { id: 'clear-job', label: 'Clear Selected Job', icon: Trash2, action: () => dispatch(setSelectedJobId(null)) },
+    { id: 'shortcuts-help', label: 'Show Keyboard Shortcuts Reference', icon: Keyboard, action: () => setIsHelpOpen(true) },
   ];
 
   const filteredCommands = commands.filter((c) =>

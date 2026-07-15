@@ -167,7 +167,8 @@ const JobDetails = React.memo(function JobDetails() {
             variant="primary"
             size="sm"
             onClick={() => window.location.href = getDownloadUrl(job.id)}
-            icon={<Download className="w-3.5 h-3.5" />}
+            icon={<Download className="w-3.5 h-3.5" aria-hidden="true" />}
+            aria-label="Download migrated workspace files as a ZIP archive"
           >
             Download ZIP
           </Button>
@@ -281,14 +282,22 @@ const JobDetails = React.memo(function JobDetails() {
             <div className="flex justify-between items-center mb-2">
               <button
                 onClick={() => setShowRawReport(!showRawReport)}
-                className="text-xs font-bold text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 select-none font-mono"
+                aria-expanded={showRawReport}
+                aria-label="Toggle raw compiler output log viewer"
+                className="text-xs font-bold text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 select-none font-mono cursor-pointer"
               >
-                {showRawReport ? <ChevronDown className="w-3.5 h-3.5 text-primary animate-pulse" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                {showRawReport ? <ChevronDown className="w-3.5 h-3.5 text-primary animate-pulse" aria-hidden="true" /> : <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />}
                 {showRawReport ? "Hide Raw Compiler Output" : "Show Raw Compiler Output"}
               </button>
               {showRawReport && (
-                <Button variant="ghost" size="sm" onClick={handleCopyLogs} className="!p-1.5 h-7">
-                  {copiedLogs ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleCopyLogs} 
+                  className="!p-1.5 h-7"
+                  aria-label="Copy raw compiler output to clipboard"
+                >
+                  {copiedLogs ? <Check className="w-3.5 h-3.5 text-success" aria-hidden="true" /> : <Copy className="w-3.5 h-3.5" aria-hidden="true" />}
                 </Button>
               )}
             </div>
@@ -349,10 +358,12 @@ const JobDetails = React.memo(function JobDetails() {
       ) : migratedFiles.length > 0 ? (
         <div className="space-y-4 pt-4 border-t border-border select-none animate-fadeIn">
           <button
-            className="flex items-center gap-1.5 text-xs font-bold text-foreground uppercase tracking-wider w-full text-left font-mono mb-2"
+            className="flex items-center gap-1.5 text-xs font-bold text-foreground uppercase tracking-wider w-full text-left font-mono mb-2 cursor-pointer"
             onClick={() => setShowFiles(!showFiles)}
+            aria-expanded={showFiles}
+            aria-label="Toggle restructured workspace file explorer and code viewer"
           >
-            {showFiles ? <ChevronDown className="w-4 h-4 text-primary animate-pulse" /> : <ChevronRight className="w-4 h-4" />}
+            {showFiles ? <ChevronDown className="w-4 h-4 text-primary animate-pulse" aria-hidden="true" /> : <ChevronRight className="w-4 h-4" aria-hidden="true" />}
             Restructured Workspace Files ({migratedFiles.length})
           </button>
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useContext, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from '../shared/components/Sidebar';
 import Topbar from '../shared/components/Topbar';
@@ -19,14 +19,82 @@ import { CommandPalette } from '../features/command-palette/components/CommandPa
 
 import { ReduxProvider } from './providers/ReduxProvider';
 import { QueryProvider } from './providers/QueryProvider';
-import { ThemeProvider } from '../lib/ThemeContext';
+import { ThemeProvider, useTheme } from '../lib/ThemeContext';
 import { fadeIn, defaultTransition } from '../animations/variants';
+
+import ShortcutProvider from '../shortcuts/shortcutProvider';
+import ShortcutDialog from '../shortcuts/components/keyboard/ShortcutDialog';
+import ShortcutContext from '../shortcuts/shortcutContext';
+import { useGlobalShortcut } from '../shortcuts/hooks/useGlobalShortcut';
 
 function AppContent() {
   const dispatch = useAppDispatch();
   const activeTab = useAppSelector((state: RootState) => state.ui.activeTab);
   const selectedJobId = useAppSelector((state: RootState) => state.workspace.selectedJobId);
   const detailsRef = useRef<HTMLDivElement>(null);
+
+  const { theme, setTheme } = useTheme();
+  const shortcutCtx = useContext(ShortcutContext);
+  const isHelpOpen = shortcutCtx?.isHelpOpen || false;
+  const setIsHelpOpen = shortcutCtx?.setIsHelpOpen || (() => {});
+
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  useGlobalShortcut('toggle-sidebar', () => setIsSidebarCollapsed((prev: boolean) => !prev));
+
+  // Bind Alt+1..8 to tabs
+  useGlobalShortcut('nav-dashboard', () => dispatch(setActiveTab('dashboard')));
+  useGlobalShortcut('nav-upload', () => {
+    dispatch(setActiveTab('dashboard'));
+    setTimeout(() => {
+      document.querySelector<HTMLElement>('#upload-card-root')?.focus();
+    }, 100);
+  });
+  useGlobalShortcut('nav-jobs', () => dispatch(setActiveTab('jobs')));
+  useGlobalShortcut('nav-job-details', () => dispatch(setActiveTab('jobs')));
+  useGlobalShortcut('nav-graph', () => dispatch(setActiveTab('graph')));
+  useGlobalShortcut('nav-settings', () => dispatch(setActiveTab('targets')));
+
+  // Bind Theme & Help
+  useGlobalShortcut('toggle-theme', () => setTheme(theme === 'dark' ? 'light' : 'dark'));
+  useGlobalShortcut('help-dialog', () => setIsHelpOpen(!isHelpOpen));
+  useGlobalShortcut('cancel-action', () => {
+    if (isHelpOpen) {
+      setIsHelpOpen(false);
+    }
+  });
+
+  // Cross-page Global Actions
+  useGlobalShortcut('upload-zip', () => {
+    dispatch(setActiveTab('dashboard'));
+    setTimeout(() => {
+      const fileInput = document.querySelector<HTMLInputElement>('#upload-card-root input[type="file"]');
+      if (fileInput) fileInput.click();
+    }, 150);
+  });
+
+  useGlobalShortcut('start-migration', () => {
+    const btn = document.querySelector<HTMLButtonElement>('#upload-card-root button');
+    if (btn && !btn.disabled) {
+      btn.click();
+    }
+  });
+
+  useGlobalShortcut('search-files', () => {
+    const fileSearch = document.querySelector<HTMLInputElement>('input[placeholder*="Search files"]');
+    if (fileSearch) {
+      fileSearch.focus();
+    } else {
+      const event = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true });
+      window.dispatchEvent(event);
+    }
+  });
+
+  useGlobalShortcut('refresh-jobs', () => {
+    const refreshBtn = document.querySelector<HTMLButtonElement>('button[title*="Refresh"]');
+    if (refreshBtn) {
+      refreshBtn.click();
+    }
+  });
 
   // Smooth scroll to details ref when a job is selected or started
   useEffect(() => {
@@ -126,7 +194,7 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-background text-foreground flex">
       {/* Sidebar Navigation Left Panel */}
-      <Sidebar />
+      <Sidebar collapsed={isSidebarCollapsed} />
 
       {/* Main workspace frame right panel */}
       <div className="flex-1 flex flex-col min-w-0">
@@ -152,6 +220,9 @@ function AppContent() {
 
       {/* Keyboard-navigable Command Palette (Ctrl + K) */}
       <CommandPalette />
+
+      {/* Keyboard Shortcuts Reference Dialog (F1) */}
+      <ShortcutDialog />
     </div>
   );
 }
@@ -161,7 +232,9 @@ export default function App() {
     <ReduxProvider>
       <QueryProvider>
         <ThemeProvider>
-          <AppContent />
+          <ShortcutProvider>
+            <AppContent />
+          </ShortcutProvider>
         </ThemeProvider>
       </QueryProvider>
     </ReduxProvider>

@@ -20,12 +20,48 @@ export default function DiagnosticsPanel({
   onTabChange,
   onClose
 }: DiagnosticsPanelProps) {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const tabs: BottomTab[] = ['problems', 'suggestions', 'notes'];
+    const currentIndex = tabs.indexOf(activeTab);
+
+    switch (e.key) {
+      case 'ArrowRight': {
+        e.preventDefault();
+        const nextIndex = (currentIndex + 1) % tabs.length;
+        onTabChange(tabs[nextIndex]);
+        const buttons = e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+        if (buttons[nextIndex]) buttons[nextIndex].focus();
+        break;
+      }
+      case 'ArrowLeft': {
+        e.preventDefault();
+        const prevIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+        onTabChange(tabs[prevIndex]);
+        const buttons = e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+        if (buttons[prevIndex]) buttons[prevIndex].focus();
+        break;
+      }
+      default:
+        break;
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#0E0F1A] border-t border-border font-sans select-none">
       {/* Console Tab selectors */}
       <div className="flex items-center justify-between border-b border-border bg-[#12131F]/40 px-3 py-1.5 text-[11px] font-mono select-none">
-        <div className="flex items-center gap-4">
+        <div 
+          role="tablist"
+          aria-label="Diagnostics Panels"
+          onKeyDown={handleKeyDown}
+          className="flex items-center gap-4"
+        >
           <button
+            id="tab-problems"
+            role="tab"
+            aria-selected={activeTab === 'problems'}
+            aria-controls="diagnostics-tabpanel"
+            tabIndex={activeTab === 'problems' ? 0 : -1}
             onClick={() => onTabChange('problems')}
             className={`flex items-center gap-1.5 py-1 px-2.5 rounded-lg border transition-all cursor-pointer ${
               activeTab === 'problems'
@@ -33,11 +69,16 @@ export default function DiagnosticsPanel({
                 : 'text-gray-400 border-transparent hover:text-white'
             }`}
           >
-            <ShieldAlert className="w-3.5 h-3.5" />
+            <ShieldAlert className="w-3.5 h-3.5" aria-hidden="true" />
             Problems ({errors.length + warnings.length})
           </button>
 
           <button
+            id="tab-suggestions"
+            role="tab"
+            aria-selected={activeTab === 'suggestions'}
+            aria-controls="diagnostics-tabpanel"
+            tabIndex={activeTab === 'suggestions' ? 0 : -1}
             onClick={() => onTabChange('suggestions')}
             className={`flex items-center gap-1.5 py-1 px-2.5 rounded-lg border transition-all cursor-pointer ${
               activeTab === 'suggestions'
@@ -45,11 +86,16 @@ export default function DiagnosticsPanel({
                 : 'text-gray-400 border-transparent hover:text-white'
             }`}
           >
-            <Info className="w-3.5 h-3.5" />
+            <Info className="w-3.5 h-3.5" aria-hidden="true" />
             Suggestions ({suggestions.length})
           </button>
 
           <button
+            id="tab-notes"
+            role="tab"
+            aria-selected={activeTab === 'notes'}
+            aria-controls="diagnostics-tabpanel"
+            tabIndex={activeTab === 'notes' ? 0 : -1}
             onClick={() => onTabChange('notes')}
             className={`flex items-center gap-1.5 py-1 px-2.5 rounded-lg border transition-all cursor-pointer ${
               activeTab === 'notes'
@@ -57,13 +103,14 @@ export default function DiagnosticsPanel({
                 : 'text-gray-400 border-transparent hover:text-white'
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5" />
+            <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
             Refactoring Notes ({healedNotes.length})
           </button>
         </div>
 
         <button
           onClick={onClose}
+          aria-label="Close diagnostics console"
           className="text-gray-500 hover:text-white text-xs font-bold font-mono px-2 py-0.5 rounded hover:bg-white/5 cursor-pointer"
         >
           ✕ Close
@@ -71,7 +118,12 @@ export default function DiagnosticsPanel({
       </div>
 
       {/* Pane Content area */}
-      <div className="flex-1 overflow-y-auto p-4 scrollbar text-[11px] font-mono leading-relaxed bg-[#090A11]">
+      <div 
+        id="diagnostics-tabpanel"
+        role="tabpanel"
+        aria-labelledby={`tab-${activeTab}`}
+        className="flex-1 overflow-y-auto p-4 scrollbar text-[11px] font-mono leading-relaxed bg-[#090A11]"
+      >
         {activeTab === 'problems' && (
           <div className="space-y-2">
             {errors.map((err, i) => (

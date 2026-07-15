@@ -1,5 +1,13 @@
-import { useEffect } from 'react';
-import ReactFlow, { Background, Controls, MiniMap, useNodesState, useEdgesState } from 'reactflow';
+import { useEffect, useContext } from 'react';
+import ReactFlow, { 
+  Background, 
+  Controls, 
+  MiniMap, 
+  useNodesState, 
+  useEdgesState, 
+  ReactFlowProvider, 
+  useReactFlow 
+} from 'reactflow';
 import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import 'reactflow/dist/style.css';
 
@@ -12,8 +20,18 @@ import MetricsCards from './MetricsCards';
 import GraphToolbar from './GraphToolbar';
 import InspectorPanel from './InspectorPanel';
 import PageHeader from '../../../shared/components/PageHeader';
+import ShortcutContext from '../../../shortcuts/shortcutContext';
+import { useGraphShortcut } from '../../../shortcuts/hooks/useGraphShortcut';
 
 export default function DependencyGraph() {
+  return (
+    <ReactFlowProvider>
+      <DependencyGraphContent />
+    </ReactFlowProvider>
+  );
+}
+
+function DependencyGraphContent() {
   const dispatch = useAppDispatch();
   const jobId = useAppSelector((state) => state.workspace.selectedJobId);
   const { selectedNode, search, filter, page } = useAppSelector((state) => state.graph);
@@ -23,10 +41,14 @@ export default function DependencyGraph() {
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  
+  const { zoomIn, zoomOut, setZoom, fitView, setCenter } = useReactFlow();
+  const shortcutCtx = useContext(ShortcutContext);
+  const pushContext = shortcutCtx?.pushContext || (() => {});
+  const popContext = shortcutCtx?.popContext || (() => {});
 
   useEffect(() => {
     if (data?.success) {
-      // Map backend nodes into React Flow nodes
       const rfNodes = (data.nodes || []).map((n: any, idx: number) => {
         const cols = 3;
         const x = (idx % cols) * 230 + 40;
@@ -98,7 +120,6 @@ export default function DependencyGraph() {
         };
       });
 
-      // Map backend edges to React Flow edges
       const rfEdges = (data.edges || []).map((e: any) => ({
         id: e.id,
         source: e.source,
@@ -111,6 +132,95 @@ export default function DependencyGraph() {
       setEdges(rfEdges);
     }
   }, [data, setNodes, setEdges]);
+
+  const navigateGraph = (direction: 'up' | 'down' | 'left' | 'right') => {
+    if (nodes.length === 0) return;
+    
+    if (!selectedNode) {
+      dispatch(setSelectedNode(nodes[0].data.raw));
+      return;
+    }
+
+    const currentNode = nodes.find(n => n.id === selectedNode.id);
+    if (!currentNode) return;
+
+    const { x: cx, y: cy } = currentNode.position;
+
+    let candidates = nodes.filter(n => n.id !== currentNode.id);
+
+    if (direction === 'up') {
+      candidates = candidates.filter(n => n.position.y < cy - 20);
+    } else if (direction === 'down') {
+      candidates = candidates.filter(n => n.position.y > cy + 20);
+    } else if (direction === 'left') {
+      candidates = candidates.filter(n => n.position.x < cx - 20);
+    } else if (direction === 'right') {
+      candidates = candidates.filter(n => n.position.x > cx + 20);
+    }
+
+    if (candidates.length === 0) return;
+
+    let closestNode = candidates[0];
+    let minDistance = Infinity;
+
+    for (const node of candidates) {
+      const dx = node.position.x - cx;
+      const dy = node.position.y - cy;
+      const dist = dx * dx + dy * dy;
+      if (dist < minDistance) {
+        minDistance = dist;
+        closestNode = node;
+      }
+    }
+
+    dispatch(setSelectedNode(closestNode.data.raw));
+    setCenter(closestNode.position.x + 80, closestNode.position.y + 40, { zoom: 1.2, duration: 250 });
+  };
+
+  // Register Graph Shortcuts
+  useGraphShortcut('graph-zoom-in', () => zoomIn());
+  useGraphShortcut('graph-zoom-out', () => zoomOut());
+  useGraphShortcut('graph-reset-zoom', () => setZoom(1));
+  useGraphShortcut('graph-fit', () => fitView({ duration: 300 }));
+  useGraphShortcut('graph-center-node', () => {
+    if (selectedNode) {
+      const node = nodes.find(n => n.id === selectedNode.id);
+      if (node) {
+        setCenter(node.position.x + 80, node.position.y + 40, { zoom: 1.2, duration: 400 });
+      }
+    }
+  });
+  useGraphShortcut('graph-focus-search', () => {
+    const input = document.querySelector<HTMLInputElement>('input[placeholder*="Search symbol"]');
+    if (input) input.focus();
+  });
+  useGraphShortcut('graph-hide-node', () => {
+    if (selectedNode) {
+      setNodes(prev => prev.filter(n => n.id !== selectedNode.id));
+      dispatch(setSelectedNode(null));
+    }
+  });
+  useGraphShortcut('graph-clear-selection', () => {
+    dispatch(setSelectedNode(null));
+  });
+  useGraphShortcut('graph-highlight-dependencies', () => {
+    if (selectedNode) {
+      setEdges(prev => prev.map(edge => {
+        if (edge.source === selectedNode.id || edge.target === selectedNode.id) {
+          return {
+            ...edge,
+            animated: true,
+            style: { stroke: '#16C784', strokeWidth: 3.5 }
+          };
+        }
+        return edge;
+      }));
+    }
+  });
+  useGraphShortcut('graph-nav-up', () => navigateGraph('up'));
+  useGraphShortcut('graph-nav-down', () => navigateGraph('down'));
+  useGraphShortcut('graph-nav-left', () => navigateGraph('left'));
+  useGraphShortcut('graph-nav-right', () => navigateGraph('right'));
 
   const handleNodeClick = (_e: any, node: any) => {
     dispatch(setSelectedNode(node.data.raw));
@@ -135,7 +245,6 @@ export default function DependencyGraph() {
           subtitle={`job ${jobId.slice(0, 8)} • target: next • page ${page} of ${totalPages || 1}`} 
         />
         
-        {/* Pagination buttons */}
         <div className="flex items-center gap-2 font-mono text-xs text-gray-500">
           <span>
             {totalNodes} symbols
@@ -159,17 +268,17 @@ export default function DependencyGraph() {
         </div>
       </div>
 
-      {/* Metrics Row */}
       <MetricsCards summary={summary} />
 
-      {/* Toolbar Search/Filter */}
       <GraphToolbar />
 
-      {/* Graph Workspace container */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        
-        {/* React Flow Viewport Card */}
-        <div className="lg:col-span-8 border border-[#1E1F35] bg-darkCard rounded-2xl overflow-hidden min-h-[380px] h-[450px] relative shadow-lg">
+        <div 
+          onFocus={() => pushContext('graph')}
+          onBlur={() => popContext('graph')}
+          tabIndex={0}
+          className="lg:col-span-8 border border-[#1E1F35] bg-darkCard rounded-2xl overflow-hidden min-h-[380px] h-[450px] relative shadow-lg focus:ring-2 focus:ring-primary focus:outline-none"
+        >
           {isLoading && (
             <div className="absolute inset-0 bg-darkBg/80 backdrop-blur-xs flex items-center justify-center z-10 text-xs font-semibold text-gray-400 gap-2 font-mono">
               <RefreshCw className="w-4 h-4 text-primary animate-spin" />
@@ -197,7 +306,6 @@ export default function DependencyGraph() {
           </ReactFlow>
         </div>
 
-        {/* Selected Node Inspector Sidebar Card */}
         <Card className="lg:col-span-4 flex flex-col h-full min-h-[380px]">
           <InspectorPanel />
         </Card>
