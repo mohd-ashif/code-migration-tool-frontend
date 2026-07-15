@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from '../shared/components/Sidebar';
 import Topbar from '../shared/components/Topbar';
 import PageHeader from '../shared/components/PageHeader';
@@ -14,9 +15,12 @@ import TargetFrameworks from '../features/migration/components/TargetFrameworks'
 import ApiKeys from '../features/migration/components/ApiKeys';
 import DependencyGraph from '../features/dependency-graph/components/DependencyGraph';
 import JobDetails from '../features/reports/components/JobDetails';
+import { CommandPalette } from '../features/command-palette/components/CommandPalette';
 
 import { ReduxProvider } from './providers/ReduxProvider';
 import { QueryProvider } from './providers/QueryProvider';
+import { ThemeProvider } from '../lib/ThemeContext';
+import { fadeIn, defaultTransition } from '../animations/variants';
 
 function AppContent() {
   const dispatch = useAppDispatch();
@@ -29,7 +33,7 @@ function AppContent() {
     if (selectedJobId) {
       const timer = setTimeout(() => {
         detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
+      }, 120);
       return () => clearTimeout(timer);
     }
   }, [selectedJobId]);
@@ -38,8 +42,7 @@ function AppContent() {
     switch (activeTab) {
       case 'dashboard':
         return (
-          <div className="space-y-8 animate-fadeIn">
-            {/* Page Header title and profile */}
+          <div className="space-y-8">
             <div className="flex justify-between items-start gap-4">
               <PageHeader
                 title="Start a Migration"
@@ -49,30 +52,37 @@ function AppContent() {
 
             {/* Split cards grid */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-              {/* Left uploader */}
               <div className="lg:col-span-7 flex flex-col">
                 <UploadCard />
               </div>
-              
-              {/* Right jobs log history */}
               <div className="lg:col-span-5 flex flex-col">
                 <RecentJobsCard />
               </div>
             </div>
 
             {/* Lower section selected details */}
-            {selectedJobId && (
-              <div ref={detailsRef} className="pt-2 border-t border-[#1E1F35] animate-slideUp">
-                <JobDetails />
-              </div>
-            )}
+            <AnimatePresence>
+              {selectedJobId && (
+                <motion.div
+                  key="job-details-wrapper"
+                  initial={{ opacity: 0, height: 0, y: 15 }}
+                  animate={{ opacity: 1, height: "auto", y: 0 }}
+                  exit={{ opacity: 0, height: 0, y: 15 }}
+                  transition={defaultTransition}
+                  ref={detailsRef}
+                  className="pt-2 border-t border-border overflow-hidden"
+                >
+                  <JobDetails />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         );
 
       case 'graph':
         if (!selectedJobId) {
           return (
-            <div className="animate-fadeIn py-16 max-w-xl mx-auto">
+            <div className="py-16 max-w-xl mx-auto">
               <EmptyState
                 icon={Network}
                 title="No Active Dependency Graph"
@@ -92,7 +102,7 @@ function AppContent() {
 
       case 'jobs':
         return (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start animate-fadeIn">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             <div className="lg:col-span-5">
               <RecentJobsCard />
             </div>
@@ -114,7 +124,7 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen bg-darkBg text-white flex">
+    <div className="min-h-screen bg-background text-foreground flex">
       {/* Sidebar Navigation Left Panel */}
       <Sidebar />
 
@@ -124,10 +134,24 @@ function AppContent() {
         
         <main className="flex-1 overflow-y-auto px-8 py-8">
           <div className="max-w-7xl mx-auto">
-            {renderContent()}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={activeTab}
+                variants={fadeIn}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                transition={{ duration: 0.15 }}
+              >
+                {renderContent()}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </main>
       </div>
+
+      {/* Keyboard-navigable Command Palette (Ctrl + K) */}
+      <CommandPalette />
     </div>
   );
 }
@@ -136,7 +160,9 @@ export default function App() {
   return (
     <ReduxProvider>
       <QueryProvider>
-        <AppContent />
+        <ThemeProvider>
+          <AppContent />
+        </ThemeProvider>
       </QueryProvider>
     </ReduxProvider>
   );
