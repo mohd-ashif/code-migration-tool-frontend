@@ -42,7 +42,7 @@ function DependencyGraphContent() {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   
-  const { zoomIn, zoomOut, setZoom, fitView, setCenter } = useReactFlow();
+  const { zoomIn, zoomOut, zoomTo, fitView, setCenter } = useReactFlow();
   const shortcutCtx = useContext(ShortcutContext);
   const pushContext = shortcutCtx?.pushContext || (() => {});
   const popContext = shortcutCtx?.popContext || (() => {});
@@ -180,7 +180,7 @@ function DependencyGraphContent() {
   // Register Graph Shortcuts
   useGraphShortcut('graph-zoom-in', () => zoomIn());
   useGraphShortcut('graph-zoom-out', () => zoomOut());
-  useGraphShortcut('graph-reset-zoom', () => setZoom(1));
+  useGraphShortcut('graph-reset-zoom', () => zoomTo(1));
   useGraphShortcut('graph-fit', () => fitView({ duration: 300 }));
   useGraphShortcut('graph-center-node', () => {
     if (selectedNode) {

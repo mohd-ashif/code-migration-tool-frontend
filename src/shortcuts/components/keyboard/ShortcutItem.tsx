@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Shortcut } from '../../types/shortcut';
 import { formatShortcut } from '../../utils/shortcutFormatter';
 import { ShortcutBadge } from './ShortcutBadge';

@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Shortcut } from '../../types/shortcut';
 import { ShortcutItem } from './ShortcutItem';
 

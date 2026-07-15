@@ -1,4 +1,4 @@
-import React, { useContext, useState, useMemo, useEffect } from 'react';
+import { useContext, useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Sparkles, X, RotateCcw, Keyboard } from 'lucide-react';
 import { ShortcutContext } from '../../shortcutContext';
