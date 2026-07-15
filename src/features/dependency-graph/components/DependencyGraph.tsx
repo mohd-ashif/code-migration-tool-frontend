@@ -1,315 +1,249 @@
-import { useEffect, useContext } from 'react';
-import ReactFlow, { 
-  Background, 
-  Controls, 
-  MiniMap, 
-  useNodesState, 
-  useEdgesState, 
-  ReactFlowProvider, 
-  useReactFlow 
-} from 'reactflow';
-import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
-import 'reactflow/dist/style.css';
-
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ReactFlowProvider, useNodesState, useEdgesState, useReactFlow, Node } from 'reactflow';
 import { useAppDispatch, useAppSelector } from '../../../store';
-import { setSelectedNode, setPage } from '../../../store/slices/graphSlice';
+import { setSelectedNode, clearNodeDetails } from '../../../store/slices/graphSlice';
 import { useDependencyGraph } from '../hooks/useDependencyGraph';
+import { useGraphFilters } from '../hooks/useGraphFilters';
+import { useGraphLayout } from '../hooks/useGraphLayout';
+import { useGraphExport } from '../hooks/useGraphExport';
+import { buildNodes, buildEdges, applyFilters, applyHighlight } from '../utils/graphBuilder';
+import { computeAnalytics } from '../utils/analytics';
+import { GraphNodeData, GraphEdgeData, LayoutMode } from '../types/graph';
 
-import Card from '../../../shared/components/Card';
 import MetricsCards from './MetricsCards';
 import GraphToolbar from './GraphToolbar';
+import GraphCanvas from './GraphCanvas';
+import FiltersPanel from './FiltersPanel';
+import StatisticsPanel from './StatisticsPanel';
 import InspectorPanel from './InspectorPanel';
+import EmptyState from '../../../shared/components/EmptyState';
+import { Network } from 'lucide-react';
 import PageHeader from '../../../shared/components/PageHeader';
+import { motion } from 'framer-motion';
+import { fadeIn } from '../../../animations/variants';
 import ShortcutContext from '../../../shortcuts/shortcutContext';
+import { useContext } from 'react';
 import { useGraphShortcut } from '../../../shortcuts/hooks/useGraphShortcut';
 
-export default function DependencyGraph() {
-  return (
-    <ReactFlowProvider>
-      <DependencyGraphContent />
-    </ReactFlowProvider>
-  );
-}
-
-function DependencyGraphContent() {
+// ── Inner component: needs ReactFlow provider to use hooks ──────────────────
+function DependencyGraphInner() {
   const dispatch = useAppDispatch();
-  const jobId = useAppSelector((state) => state.workspace.selectedJobId);
-  const { selectedNode, search, filter, page } = useAppSelector((state) => state.graph);
+  const jobId = useAppSelector(state => state.workspace.selectedJobId);
+  const { selectedNode, search, page } = useAppSelector(state => state.graph);
 
-  const limit = 12;
-  const { data, isLoading } = useDependencyGraph(jobId, page, limit, search, filter);
+  const limit = 24;
+  const { data, isLoading, refetch } = useDependencyGraph(jobId, page, limit, search);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  
-  const { zoomIn, zoomOut, zoomTo, fitView, setCenter } = useReactFlow();
-  const shortcutCtx = useContext(ShortcutContext);
-  const pushContext = shortcutCtx?.pushContext || (() => {});
-  const popContext = shortcutCtx?.popContext || (() => {});
+  const [nodes, setNodes, onNodesChange] = useNodesState<GraphNodeData>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<GraphEdgeData>([]);
+  const [hiddenNodeIds, setHiddenNodeIds] = useState<Set<string>>(new Set());
+  const [showFilters, setShowFilters] = useState(false);
+  const [showStats, setShowStats] = useState(false);
 
-  useEffect(() => {
-    if (data?.success) {
-      const rfNodes = (data.nodes || []).map((n: any, idx: number) => {
-        const cols = 3;
-        const x = (idx % cols) * 230 + 40;
-        const y = Math.floor(idx / cols) * 140 + 40;
+  const { filters, toggleFilter, resetFilters } = useGraphFilters();
+  const { layoutMode, applyGraphLayout, changeLayout } = useGraphLayout();
+  const { canvasRef, exportAsJSON } = useGraphExport();
 
-        let bg = '#12131F'; 
-        let border = '#1E1F35'; 
-        let color = '#a1a1aa';
+  const { fitView, zoomIn, zoomOut, zoomTo } = useReactFlow();
 
-        if (n.type === 'component') {
-          border = '#7C6CFF'; 
-          color = '#ffffff';
-        } else if (n.type === 'hook') {
-          border = '#A68CFF'; 
-          color = '#ffffff';
-        } else if (n.type === 'function') {
-          border = '#16C784'; 
-          color = '#ffffff';
-        } else if (n.type === 'class' || n.type === 'interface' || n.type === 'enum') {
-          border = '#F5A623'; 
-          color = '#ffffff';
-        }
+  // Shortcut scope (registered but not used directly in render)
+  useContext(ShortcutContext);
 
-        if (n.isCircular) {
-          border = '#FF5D73';
-          color = '#FF5D73';
-        }
-
-        if (n.isUnused) {
-          border = '#F5A623';
-          color = '#F5A623';
-        }
-
-        return {
-          id: n.id,
-          type: 'default',
-          position: { x, y },
-          data: {
-            label: (
-              <div className="text-center font-mono text-[9px] select-none leading-tight py-1">
-                <div className="font-bold flex items-center justify-center gap-1">
-                  {n.isCircular && <span className="w-1.5 h-1.5 rounded-full bg-error animate-ping shrink-0" />}
-                  {n.label}
-                </div>
-                <div className="text-[7.5px] opacity-60 uppercase mt-0.5 font-bold tracking-wider">{n.type}</div>
-                {n.isUnused && (
-                  <span className="mt-1 inline-block px-1.5 py-0.5 bg-warning/10 text-warning border border-warning/20 rounded text-[6.5px] font-extrabold uppercase font-mono tracking-wide">
-                    UNUSED
-                  </span>
-                )}
-              </div>
-            ),
-            raw: n
-          },
-          style: {
-            background: bg,
-            color,
-            border: `1.5px ${n.isUnused ? 'dashed' : 'solid'} ${border}`,
-            borderRadius: '12px',
-            padding: '8px',
-            width: 160,
-            fontSize: '11px',
-            boxShadow: n.isCircular 
-              ? '0 0 15px rgba(255, 93, 115, 0.25)' 
-              : n.isUnused
-                ? 'none'
-                : '0 4px 12px rgba(0, 0, 0, 0.4)',
-          }
-        };
-      });
-
-      const rfEdges = (data.edges || []).map((e: any) => ({
-        id: e.id,
-        source: e.source,
-        target: e.target,
-        animated: e.type === 'import',
-        style: { stroke: e.type === 'import' ? '#7C6CFF' : '#1E1F35', strokeWidth: 1.5 },
-      }));
-
-      setNodes(rfNodes);
-      setEdges(rfEdges);
-    }
-  }, [data, setNodes, setEdges]);
-
-  const navigateGraph = (direction: 'up' | 'down' | 'left' | 'right') => {
-    if (nodes.length === 0) return;
-    
-    if (!selectedNode) {
-      dispatch(setSelectedNode(nodes[0].data.raw));
-      return;
-    }
-
-    const currentNode = nodes.find(n => n.id === selectedNode.id);
-    if (!currentNode) return;
-
-    const { x: cx, y: cy } = currentNode.position;
-
-    let candidates = nodes.filter(n => n.id !== currentNode.id);
-
-    if (direction === 'up') {
-      candidates = candidates.filter(n => n.position.y < cy - 20);
-    } else if (direction === 'down') {
-      candidates = candidates.filter(n => n.position.y > cy + 20);
-    } else if (direction === 'left') {
-      candidates = candidates.filter(n => n.position.x < cx - 20);
-    } else if (direction === 'right') {
-      candidates = candidates.filter(n => n.position.x > cx + 20);
-    }
-
-    if (candidates.length === 0) return;
-
-    let closestNode = candidates[0];
-    let minDistance = Infinity;
-
-    for (const node of candidates) {
-      const dx = node.position.x - cx;
-      const dy = node.position.y - cy;
-      const dist = dx * dx + dy * dy;
-      if (dist < minDistance) {
-        minDistance = dist;
-        closestNode = node;
-      }
-    }
-
-    dispatch(setSelectedNode(closestNode.data.raw));
-    setCenter(closestNode.position.x + 80, closestNode.position.y + 40, { zoom: 1.2, duration: 250 });
-  };
-
-  // Register Graph Shortcuts
+  // Keyboard shortcuts
   useGraphShortcut('graph-zoom-in', () => zoomIn());
   useGraphShortcut('graph-zoom-out', () => zoomOut());
   useGraphShortcut('graph-reset-zoom', () => zoomTo(1));
   useGraphShortcut('graph-fit', () => fitView({ duration: 300 }));
-  useGraphShortcut('graph-center-node', () => {
-    if (selectedNode) {
-      const node = nodes.find(n => n.id === selectedNode.id);
-      if (node) {
-        setCenter(node.position.x + 80, node.position.y + 40, { zoom: 1.2, duration: 400 });
-      }
-    }
-  });
-  useGraphShortcut('graph-focus-search', () => {
-    const input = document.querySelector<HTMLInputElement>('input[placeholder*="Search symbol"]');
-    if (input) input.focus();
-  });
-  useGraphShortcut('graph-hide-node', () => {
-    if (selectedNode) {
-      setNodes(prev => prev.filter(n => n.id !== selectedNode.id));
-      dispatch(setSelectedNode(null));
-    }
-  });
-  useGraphShortcut('graph-clear-selection', () => {
-    dispatch(setSelectedNode(null));
-  });
-  useGraphShortcut('graph-highlight-dependencies', () => {
-    if (selectedNode) {
-      setEdges(prev => prev.map(edge => {
-        if (edge.source === selectedNode.id || edge.target === selectedNode.id) {
-          return {
-            ...edge,
-            animated: true,
-            style: { stroke: '#16C784', strokeWidth: 3.5 }
-          };
-        }
-        return edge;
-      }));
-    }
-  });
-  useGraphShortcut('graph-nav-up', () => navigateGraph('up'));
-  useGraphShortcut('graph-nav-down', () => navigateGraph('down'));
-  useGraphShortcut('graph-nav-left', () => navigateGraph('left'));
-  useGraphShortcut('graph-nav-right', () => navigateGraph('right'));
+  useGraphShortcut('graph-clear-selection', () => dispatch(clearNodeDetails()));
 
-  const handleNodeClick = (_e: any, node: any) => {
-    dispatch(setSelectedNode(node.data.raw));
+  // Build graph when data arrives
+  useEffect(() => {
+    if (!data?.success) return;
+
+    const rawNodes = data.nodes || [];
+    const rawEdges = data.edges || [];
+
+    const builtNodes = buildNodes(rawNodes);
+    const builtEdges = buildEdges(rawEdges);
+
+    setNodes(builtNodes);
+    setEdges(builtEdges);
+
+    // Apply auto-layout: delay so ReactFlow finishes mounting nodes first
+    setTimeout(() => {
+      applyGraphLayout(builtNodes, builtEdges, layoutMode);
+    }, 350);
+  }, [data]);
+
+  // Apply filters + highlight
+  const visibleNodes = useMemo(() => {
+    const filtered = applyFilters(nodes, filters);
+    const noHidden = filtered.filter(n => !hiddenNodeIds.has(n.id));
+    const { nodes: highlighted } = applyHighlight(noHidden, edges, selectedNode?.id || null);
+    return highlighted;
+  }, [nodes, edges, filters, hiddenNodeIds, selectedNode]);
+
+  const visibleEdges = useMemo(() => {
+    const visibleIds = new Set(visibleNodes.map(n => n.id));
+    const filtered = edges.filter(e => visibleIds.has(e.source) && visibleIds.has(e.target));
+    const { edges: highlighted } = applyHighlight(visibleNodes, filtered, selectedNode?.id || null);
+    return highlighted;
+  }, [edges, visibleNodes, selectedNode]);
+
+  // Analytics
+  const analytics = useMemo(() => computeAnalytics(visibleNodes, visibleEdges), [visibleNodes, visibleEdges]);
+
+  // Search: auto-focus node
+  useEffect(() => {
+    if (!search) return;
+    const match = visibleNodes.find(n =>
+      n.data.label?.toLowerCase().includes(search.toLowerCase()) ||
+      n.data.file?.toLowerCase().includes(search.toLowerCase())
+    );
+    if (match) {
+      setTimeout(() => {
+        fitView({ nodes: [{ id: match.id }], duration: 500, padding: 0.3 });
+      }, 100);
+    }
+  }, [search, visibleNodes]);
+
+  const handleNodeClick = useCallback((_: any, node: Node<GraphNodeData>) => {
+    dispatch(setSelectedNode(node.data));
+  }, [dispatch]);
+
+  const handleNodeDoubleClick = useCallback((_: any, node: Node<GraphNodeData>) => {
+    fitView({ nodes: [{ id: node.id }], duration: 400, padding: 0.3 });
+  }, [fitView]);
+
+  const handleHighlightDeps = useCallback((nodeId: string) => {
+    const node = nodes.find(n => n.id === nodeId);
+    if (node) dispatch(setSelectedNode(node.data));
+  }, [nodes, dispatch]);
+
+  const handleHideNode = useCallback((nodeId: string) => {
+    setHiddenNodeIds(prev => new Set([...prev, nodeId]));
+    dispatch(clearNodeDetails());
+  }, [dispatch]);
+
+  const handleChangeLayout = useCallback((mode: LayoutMode) => {
+    changeLayout(mode, nodes, edges);
+  }, [changeLayout, nodes, edges]);
+
+  const handleExportJSON = useCallback(() => {
+    exportAsJSON(visibleNodes, visibleEdges);
+  }, [exportAsJSON, visibleNodes, visibleEdges]);
+
+  if (!jobId) {
+    return (
+      <EmptyState
+        icon={Network}
+        title="No Migration Job Selected"
+        description="Select a completed migration job to visualize its dependency graph."
+      />
+    );
+  }
+
+  const summaryForCards = {
+    totalComponents: analytics.totalComponents,
+    totalHooks: analytics.totalHooks,
+    unusedCount: analytics.unusedCount,
+    circularCount: analytics.circularCount,
   };
-
-  const totalPages = data?.pagination?.totalPages || 1;
-  const totalNodes = data?.pagination?.totalNodes || 0;
-  const summary = data?.summary || {
-    totalComponents: 0,
-    totalHooks: 0,
-    circularCount: 0,
-    unusedCount: 0,
-  };
-
-  if (!jobId) return null;
 
   return (
-    <div className="space-y-6 select-none animate-fadeIn">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <PageHeader 
-          title="Dependency Architecture Graph" 
-          subtitle={`job ${jobId.slice(0, 8)} • target: next • page ${page} of ${totalPages || 1}`} 
-        />
-        
-        <div className="flex items-center gap-2 font-mono text-xs text-gray-500">
-          <span>
-            {totalNodes} symbols
-          </span>
-          <div className="flex gap-1.5 ml-2">
-            <button
-              onClick={() => dispatch(setPage(Math.max(1, page - 1)))}
-              disabled={page <= 1 || isLoading}
-              className="p-2 bg-darkCard border border-[#1E1F35] hover:bg-[#1E1F35] text-gray-400 hover:text-white rounded-xl disabled:opacity-30 disabled:pointer-events-none transition-colors"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => dispatch(setPage(Math.min(totalPages, page + 1)))}
-              disabled={page >= totalPages || isLoading}
-              className="p-2 bg-darkCard border border-[#1E1F35] hover:bg-[#1E1F35] text-gray-400 hover:text-white rounded-xl disabled:opacity-30 disabled:pointer-events-none transition-colors"
-            >
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
+    <motion.div variants={fadeIn} initial="hidden" animate="visible" className="flex flex-col gap-4 h-full">
+      <PageHeader
+        title="Dependency Graph"
+        subtitle="Interactive architecture visualization for your migration project"
+      />
+
+      {/* Metrics row */}
+      {!isLoading && <MetricsCards summary={summaryForCards} />}
+
+      {/* Toolbar */}
+      <GraphToolbar
+        onToggleFilters={() => setShowFilters(v => !v)}
+        onToggleStats={() => setShowStats(v => !v)}
+        onRefetch={refetch}
+        isLoading={isLoading}
+        totalNodes={analytics.totalNodes}
+        totalEdges={analytics.totalEdges}
+      />
+
+      {/* Main canvas area */}
+      <div className="flex gap-4" style={{ height: '580px', minHeight: '580px' }}>
+
+        {/* Filters Panel */}
+        {showFilters && (
+          <div className="shrink-0" style={{ width: '224px' }}>
+            <FiltersPanel
+              filters={filters}
+              onToggle={toggleFilter}
+              onReset={resetFilters}
+              onClose={() => setShowFilters(false)}
+            />
+          </div>
+        )}
+
+        {/* Canvas — takes remaining space */}
+        <div className="flex-1 rounded-2xl overflow-hidden border border-[#1E1F35] bg-[#090A11] relative" style={{ minWidth: 0 }}>
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-12 h-12 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                <span className="text-xs font-mono text-gray-500">Building dependency graph...</span>
+              </div>
+            </div>
+          ) : visibleNodes.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <EmptyState
+                icon={Network}
+                title="No Nodes to Display"
+                description="Adjust your filters or select a different migration job."
+              />
+            </div>
+          ) : (
+            <GraphCanvas
+              nodes={visibleNodes}
+              edges={visibleEdges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onNodeClick={handleNodeClick}
+              onNodeDoubleClick={handleNodeDoubleClick}
+              layoutMode={layoutMode}
+              onChangeLayout={handleChangeLayout}
+              onExportJSON={handleExportJSON}
+              onHighlightDeps={handleHighlightDeps}
+              onHideNode={handleHideNode}
+              canvasRef={canvasRef}
+            />
+          )}
+        </div>
+
+        {/* Right column — inspector + optional stats */}
+        <div className="shrink-0 flex flex-col gap-3 overflow-y-auto" style={{ width: '256px' }}>
+          {showStats && (
+            <StatisticsPanel summary={analytics} onClose={() => setShowStats(false)} />
+          )}
+          <div
+            className="bg-[#0B0B12] border border-[#1E1F35] rounded-2xl p-4 overflow-y-auto flex-1"
+          >
+            <div className="text-[9px] font-bold uppercase tracking-widest text-gray-500 font-mono mb-3">
+              Node Inspector
+            </div>
+            <InspectorPanel />
           </div>
         </div>
       </div>
+    </motion.div>
+  );
+}
 
-      <MetricsCards summary={summary} />
-
-      <GraphToolbar />
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        <div 
-          onFocus={() => pushContext('graph')}
-          onBlur={() => popContext('graph')}
-          tabIndex={0}
-          className="lg:col-span-8 border border-[#1E1F35] bg-darkCard rounded-2xl overflow-hidden min-h-[380px] h-[450px] relative shadow-lg focus:ring-2 focus:ring-primary focus:outline-none"
-        >
-          {isLoading && (
-            <div className="absolute inset-0 bg-darkBg/80 backdrop-blur-xs flex items-center justify-center z-10 text-xs font-semibold text-gray-400 gap-2 font-mono">
-              <RefreshCw className="w-4 h-4 text-primary animate-spin" />
-              Recalculating graph...
-            </div>
-          )}
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onNodeClick={handleNodeClick}
-            fitView
-            maxZoom={1.5}
-            minZoom={0.5}
-          >
-            <Background color="#1E1F35" gap={18} size={1} />
-            <Controls className="!bg-[#12131F] !border-[#1E1F35] !shadow-none !rounded-xl overflow-hidden [&>button]:!border-[#1E1F35]" />
-            <MiniMap 
-              nodeStrokeColor={(n: any) => n.style?.border?.split(' ').pop() || '#ccc'}
-              nodeColor={(n: any) => n.style?.background || '#eee'}
-              className="!border-[#1E1F35] !shadow-none !rounded-xl overflow-hidden"
-              maskColor="rgba(11, 11, 18, 0.6)"
-            />
-          </ReactFlow>
-        </div>
-
-        <Card className="lg:col-span-4 flex flex-col h-full min-h-[380px]">
-          <InspectorPanel />
-        </Card>
-      </div>
-    </div>
+// ── Public export wrapped in ReactFlowProvider ───────────────────────────────
+export default function DependencyGraph() {
+  return (
+    <ReactFlowProvider>
+      <DependencyGraphInner />
+    </ReactFlowProvider>
   );
 }
