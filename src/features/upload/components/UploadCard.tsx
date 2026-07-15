@@ -29,6 +29,10 @@ const UploadCard = React.memo(function UploadCard() {
 
   const inputRef = useRef<HTMLInputElement>(null);
 
+
+
+
+
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -125,7 +129,11 @@ const UploadCard = React.memo(function UploadCard() {
   const loading = isParsing || isMigrating;
 
   return (
-    <Card className="flex flex-col flex-1 h-[460px] relative overflow-hidden">
+    <Card 
+      id="upload-card-root"
+      tabIndex={0}
+      className="flex flex-col flex-1 h-[460px] relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+    >
       <AnimatePresence mode="wait" initial={false}>
         {step === 'upload' ? (
           <motion.div

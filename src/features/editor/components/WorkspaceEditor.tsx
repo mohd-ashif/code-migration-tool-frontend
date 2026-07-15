@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useContext } from 'react';
 import { useEditorState } from '../hooks/useEditorState';
 import FileExplorer from './FileExplorer';
 import EditorToolbar from './EditorToolbar';
@@ -9,6 +9,8 @@ import DiagnosticsPanel from './DiagnosticsPanel';
 import AIReviewPanel from './AIReviewPanel';
 import { ParsedFile } from '../../../shared/types/api.types';
 import { getMockOriginalContent } from '../utils/diff';
+import ShortcutContext from '../../../shortcuts/shortcutContext';
+import { useEditorShortcut } from '../../../shortcuts/hooks/useEditorShortcut';
 
 interface WorkspaceEditorProps {
   files: ParsedFile[];
@@ -28,6 +30,34 @@ export default function WorkspaceEditor({
   const state = useEditorState();
   const workspaceRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const previousActiveElementRef = useRef<HTMLElement | null>(null);
+
+  const shortcutCtx = useContext(ShortcutContext);
+  const pushContext = shortcutCtx?.pushContext || (() => {});
+  const popContext = shortcutCtx?.popContext || (() => {});
+
+  const handlePrevFile = () => {
+    if (files.length <= 1 || !state.selectedFile) return;
+    const idx = files.findIndex(f => f.path === state.selectedFile?.path);
+    const prevIdx = (idx - 1 + files.length) % files.length;
+    state.setSelectedFile(files[prevIdx]);
+  };
+
+  const handleNextFile = () => {
+    if (files.length <= 1 || !state.selectedFile) return;
+    const idx = files.findIndex(f => f.path === state.selectedFile?.path);
+    const nextIdx = (idx + 1) % files.length;
+    state.setSelectedFile(files[nextIdx]);
+  };
+
+  const handleCloseFile = () => {
+    state.setSelectedFile(null);
+  };
+
+  useEditorShortcut('editor-prev-file', handlePrevFile);
+  useEditorShortcut('editor-next-file', handleNextFile);
+  useEditorShortcut('editor-close-file', handleCloseFile);
+  useEditorShortcut('editor-fullscreen', () => setIsFullscreen(!isFullscreen));
 
   // Set first file as selected initially if none is selected
   useEffect(() => {
@@ -44,14 +74,80 @@ export default function WorkspaceEditor({
       }
     };
     if (isFullscreen) {
+      previousActiveElementRef.current = document.activeElement as HTMLElement;
       document.addEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
+      if (previousActiveElementRef.current) {
+        // Yield execution briefly to let DOM transitions finish before setting focus
+        setTimeout(() => {
+          previousActiveElementRef.current?.focus();
+          previousActiveElementRef.current = null;
+        }, 50);
+      }
     }
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
+    };
+  }, [isFullscreen]);
+
+  // Focus trap inside fullscreen container
+  useEffect(() => {
+    if (!isFullscreen || !workspaceRef.current) return;
+
+    const container = workspaceRef.current;
+    const getFocusableElements = () => {
+      return Array.from(
+        container.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter(el => {
+        const style = window.getComputedStyle(el);
+        return (
+          style.display !== 'none' &&
+          style.visibility !== 'hidden' &&
+          !(el as any).disabled
+        );
+      });
+    };
+
+    const handleTabKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+
+      const focusable = getFocusableElements();
+      if (focusable.length === 0) {
+        e.preventDefault();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement as HTMLElement;
+
+      if (e.shiftKey) {
+        if (active === first || !container.contains(active)) {
+          last.focus();
+          e.preventDefault();
+        }
+      } else {
+        if (active === last || !container.contains(active)) {
+          first.focus();
+          e.preventDefault();
+        }
+      }
+    };
+
+    const focusable = getFocusableElements();
+    if (focusable.length > 0) {
+      // Focus the first element (toolbar element or active button)
+      focusable[0].focus();
+    }
+
+    document.addEventListener('keydown', handleTabKey);
+    return () => {
+      document.removeEventListener('keydown', handleTabKey);
     };
   }, [isFullscreen]);
 
@@ -126,7 +222,7 @@ export default function WorkspaceEditor({
     if (!state.selectedFile) return;
     const downloadCode = state.viewMode === 'original' ? originalCode : activeCode;
     const element = document.createElement("a");
-    const file = new Blob([downloadCode], {type: 'text/plain'});
+    const file = new Blob([downloadCode], { type: 'text/plain' });
     element.href = URL.createObjectURL(file);
     element.download = currentFileName.split('/').pop() || 'file';
     document.body.appendChild(element);
@@ -137,11 +233,13 @@ export default function WorkspaceEditor({
   return (
     <div
       ref={workspaceRef}
-      className={`border border-border bg-[#0E0F1A] overflow-hidden flex select-none relative shadow-2xl transition-all duration-300 ${
-        isFullscreen
+      onFocus={() => pushContext('editor')}
+      onBlur={() => popContext('editor')}
+      tabIndex={0}
+      className={`border border-border bg-[#0E0F1A] overflow-hidden flex select-none relative shadow-2xl transition-all duration-300 focus:outline-none focus:ring-1 focus:ring-primary/20 ${isFullscreen
           ? 'fixed inset-0 z-[999] h-screen w-screen rounded-none'
           : 'rounded-2xl h-[580px]'
-      }`}
+        }`}
     >
       {/* 1. Left Sidebar - File Explorer */}
       <div
@@ -163,7 +261,7 @@ export default function WorkspaceEditor({
 
       {/* Center & Right panels */}
       <div className="flex-1 flex overflow-hidden min-w-0">
-        
+
         {/* 2. Middle Panel - Toolbar, Editor, Footer problems */}
         <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
           {/* Top toolbar */}

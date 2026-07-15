@@ -54,8 +54,15 @@ export default function EditorToolbar({
       </div>
 
       {/* Center workspace toggles */}
-      <div className="flex items-center gap-1.5 bg-[#0B0B12] p-1 border border-border rounded-xl">
+      <div 
+        role="tablist" 
+        aria-label="Editor View Mode" 
+        className="flex items-center gap-1.5 bg-[#0B0B12] p-1 border border-border rounded-xl"
+      >
         <button
+          role="tab"
+          aria-selected={viewMode === 'original'}
+          aria-label="View original source code"
           onClick={() => onViewModeChange('original')}
           className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
             viewMode === 'original'
@@ -66,6 +73,9 @@ export default function EditorToolbar({
           Original
         </button>
         <button
+          role="tab"
+          aria-selected={viewMode === 'editor'}
+          aria-label="View migrated source code"
           onClick={() => onViewModeChange('editor')}
           className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
             viewMode === 'editor'
@@ -76,6 +86,9 @@ export default function EditorToolbar({
           Migrated
         </button>
         <button
+          role="tab"
+          aria-selected={viewMode === 'diff'}
+          aria-label="View side-by-side or unified diff comparison"
           onClick={() => onViewModeChange('diff')}
           className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
             viewMode === 'diff'
@@ -91,13 +104,19 @@ export default function EditorToolbar({
       <div className="flex items-center gap-2">
         {/* Toggle between Side-by-Side and Unified Diff */}
         {viewMode === 'diff' && (
-          <div className="flex items-center gap-1 bg-[#0B0B12] p-0.5 border border-border rounded-lg mr-2">
+          <div 
+            role="group" 
+            aria-label="Diff Layout Mode"
+            className="flex items-center gap-1 bg-[#0B0B12] p-0.5 border border-border rounded-lg mr-2"
+          >
             <button
               onClick={() => onDiffModeChange('side-by-side')}
               className={`p-1 rounded cursor-pointer ${
                 diffMode === 'side-by-side' ? 'bg-primary/10 text-primary' : 'text-gray-500 hover:text-white'
               }`}
               title="Side-by-Side Diff"
+              aria-label="Side-by-side diff comparison layout"
+              aria-pressed={diffMode === 'side-by-side'}
             >
               <Split className="w-3.5 h-3.5" />
             </button>
@@ -107,6 +126,8 @@ export default function EditorToolbar({
                 diffMode === 'inline' ? 'bg-primary/10 text-primary' : 'text-gray-500 hover:text-white'
               }`}
               title="Unified / Inline Diff"
+              aria-label="Inline diff comparison layout"
+              aria-pressed={diffMode === 'inline'}
             >
               <Layout className="w-3.5 h-3.5" />
             </button>
@@ -122,6 +143,8 @@ export default function EditorToolbar({
               : 'bg-[#1E1F35] border-border text-gray-400 hover:text-white hover:bg-[#2B2C4E]'
           }`}
           title="Toggle Word Wrap"
+          aria-label="Toggle editor word wrap"
+          aria-pressed={wordWrap}
         >
           <AlignLeft className="w-3.5 h-3.5" />
         </button>
@@ -135,6 +158,8 @@ export default function EditorToolbar({
               : 'bg-[#1E1F35] border-border text-gray-400 hover:text-white hover:bg-[#2B2C4E]'
           }`}
           title="Toggle Minimap"
+          aria-label="Toggle editor minimap"
+          aria-pressed={minimap}
         >
           <Eye className="w-3.5 h-3.5" />
         </button>
@@ -144,8 +169,9 @@ export default function EditorToolbar({
           onClick={handleCopy}
           className="p-1.5 bg-[#1E1F35] hover:bg-[#2B2C4E] border border-border text-gray-400 hover:text-white rounded-lg transition-colors cursor-pointer"
           title="Copy Code"
+          aria-label="Copy source code to clipboard"
         >
-          {copied ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
+          {copied ? <Check className="w-3.5 h-3.5 text-success" aria-hidden="true" /> : <Copy className="w-3.5 h-3.5" aria-hidden="true" />}
         </button>
 
         {/* Download Button */}
@@ -153,8 +179,9 @@ export default function EditorToolbar({
           onClick={onDownload}
           className="p-1.5 bg-[#1E1F35] hover:bg-[#2B2C4E] border border-border text-gray-400 hover:text-white rounded-lg transition-colors cursor-pointer"
           title="Download Code File"
+          aria-label="Download source code file"
         >
-          <Download className="w-3.5 h-3.5" />
+          <Download className="w-3.5 h-3.5" aria-hidden="true" />
         </button>
 
         {/* Fullscreen Button */}
@@ -162,8 +189,10 @@ export default function EditorToolbar({
           onClick={onFullscreenToggle}
           className="p-1.5 bg-[#1E1F35] hover:bg-[#2B2C4E] border border-border text-gray-400 hover:text-white rounded-lg transition-colors cursor-pointer"
           title={fullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+          aria-label={fullscreen ? 'Exit fullscreen layout view' : 'Enter fullscreen layout view'}
+          aria-pressed={fullscreen}
         >
-          {fullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+          {fullscreen ? <Minimize2 className="w-3.5 h-3.5" aria-hidden="true" /> : <Maximize2 className="w-3.5 h-3.5" aria-hidden="true" />}
         </button>
       </div>
     </div>

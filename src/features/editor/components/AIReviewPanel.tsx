@@ -25,6 +25,7 @@ export default function AIReviewPanel({
         </span>
         <button
           onClick={onClose}
+          aria-label="Close AI Summary panel"
           className="text-gray-500 hover:text-white text-xs font-mono px-2 py-0.5 rounded hover:bg-white/5 cursor-pointer"
         >
           ✕ Close
@@ -101,21 +102,25 @@ export default function AIReviewPanel({
           <span className="block text-[9px] font-bold text-gray-500 uppercase tracking-widest font-mono">
             Automated Checks
           </span>
-          <div className="space-y-2 text-[10.5px] text-gray-300 font-mono">
-            <div className="flex items-center gap-2">
-              <CheckSquare className="w-3.5 h-3.5 text-success shrink-0" />
+          <div className="space-y-2 text-[10.5px] text-gray-300 font-mono" role="list">
+            <div className="flex items-center gap-2" role="listitem">
+              <CheckSquare className="w-3.5 h-3.5 text-success shrink-0" aria-hidden="true" />
+              <span className="sr-only">Passed check: </span>
               <span>Converted React Context API</span>
             </div>
-            <div className="flex items-center gap-2">
-              <CheckSquare className="w-3.5 h-3.5 text-success shrink-0" />
+            <div className="flex items-center gap-2" role="listitem">
+              <CheckSquare className="w-3.5 h-3.5 text-success shrink-0" aria-hidden="true" />
+              <span className="sr-only">Passed check: </span>
               <span>Resolved React Router bindings</span>
             </div>
-            <div className="flex items-center gap-2">
-              <CheckSquare className="w-3.5 h-3.5 text-success shrink-0" />
+            <div className="flex items-center gap-2" role="listitem">
+              <CheckSquare className="w-3.5 h-3.5 text-success shrink-0" aria-hidden="true" />
+              <span className="sr-only">Passed check: </span>
               <span>Cleaned unused import imports</span>
             </div>
-            <div className="flex items-center gap-2">
-              <CheckSquare className="w-3.5 h-3.5 text-success shrink-0" />
+            <div className="flex items-center gap-2" role="listitem">
+              <CheckSquare className="w-3.5 h-3.5 text-success shrink-0" aria-hidden="true" />
+              <span className="sr-only">Passed check: </span>
               <span>Inlined styled-component values</span>
             </div>
           </div>
