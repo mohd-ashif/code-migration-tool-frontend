@@ -72,7 +72,7 @@ function parseReportDetails(summaryText: string) {
 
 const JobDetails = React.memo(function JobDetails() {
   const jobId = useAppSelector((state) => state.workspace.selectedJobId);
-  const { job, isLoading: isLoadingJob } = useJob(jobId);
+  const { job } = useJob(jobId);
   const { report, isLoading: isLoadingReport } = useMigrationReport(jobId, job?.status === 'completed');
 
   const [selectedFile, setSelectedFile] = useState<ParsedFile | null>(null);
