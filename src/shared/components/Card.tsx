@@ -1,4 +1,7 @@
 import React from 'react';
+import { motion } from 'framer-motion';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { defaultTransition, slideUp } from '../../animations/variants';
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
@@ -7,14 +10,36 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export default function Card({ children, hoverEffect = false, glow = false, className = '', ...props }: CardProps) {
+  const isReduced = useReducedMotion();
+
+  const hoverVariants = isReduced
+    ? {}
+    : {
+        scale: 1.02,
+        y: -3,
+        boxShadow: "0 12px 30px -10px rgba(0, 0, 0, 0.55)",
+        borderColor: "rgba(99, 102, 241, 0.45)",
+      };
+
   return (
-    <div
-      className={`bg-darkCard border border-[#1E1F35] rounded-2xl p-6 transition-all duration-300 ${
-        hoverEffect ? 'hover:-translate-y-1 hover:border-[#7C6CFF]/30 hover:shadow-glow' : ''
-      } ${glow ? 'shadow-glow border-[#7C6CFF]/20' : ''} ${className}`}
-      {...props}
+    <motion.div
+      variants={slideUp}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      layout="position"
+      transition={defaultTransition}
+      whileHover={hoverEffect || className.includes('hover:') ? hoverVariants : undefined}
+      whileTap={hoverEffect ? { scale: 0.985 } : undefined}
+      className={`bg-card border border-border rounded-2xl p-6 relative overflow-hidden ${
+        glow ? 'shadow-glow border-primary/20' : ''
+      } ${className}`}
+      {...(props as any)}
     >
+      {hoverEffect && !isReduced && (
+        <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+      )}
       {children}
-    </div>
+    </motion.div>
   );
 }
