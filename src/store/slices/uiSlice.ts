@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-export type ActiveTab = 'dashboard' | 'graph' | 'jobs' | 'targets' | 'apiKeys';
+export type ActiveTab = 'dashboard' | 'graph' | 'jobs' | 'targets' | 'apiKeys' | 'history' | 'reports' | 'billing' | 'settings';
 
 interface UiState {
   activeTab: ActiveTab;

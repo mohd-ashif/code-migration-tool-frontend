@@ -1,4 +1,4 @@
-import apiClient, { API_KEY } from '../../../services/http/apiClient';
+import apiClient from '../../../services/http/apiClient';
 import { JobRecord } from '../../../shared/types/api.types';
 
 export async function getJobs(): Promise<{ success: boolean; jobs?: JobRecord[] }> {
@@ -10,5 +10,7 @@ export async function getJobStatus(jobId: string): Promise<{ success: boolean; j
 }
 
 export function getDownloadUrl(jobId: string): string {
-  return `/api/download?jobId=${jobId}&apiKey=${API_KEY}`;
+  // Uses session cookie (withCredentials) — no API key exposed in URL
+  return `/api/download?jobId=${jobId}`;
 }
+
