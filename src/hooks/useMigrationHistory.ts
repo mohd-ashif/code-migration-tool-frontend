@@ -16,7 +16,7 @@ async function fetchMigrationHistory(filters: HistoryFilters): Promise<{ jobs: J
   params.set('limit', String(filters.limit ?? 20));
   params.set('offset', String(filters.offset ?? 0));
 
-  const res: any = await apiClient.get(`/api/jobs?${params.toString()}`);
+  const res: any = await apiClient.get(`/api/history?${params.toString()}`);
   return { jobs: res.jobs ?? [], total: res.total ?? (res.jobs ?? []).length };
 }
 

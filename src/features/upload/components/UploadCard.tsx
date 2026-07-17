@@ -11,7 +11,12 @@ import { ParsedFile } from '../../../shared/types/api.types';
 import { defaultTransition, slideHorizontal } from '../../../animations/variants';
 import { useReducedMotion } from '../../../hooks/useReducedMotion';
 
-const UploadCard = React.memo(function UploadCard() {
+interface UploadCardProps {
+  /** When true (e.g. network offline), all upload/migration actions are disabled */
+  disabled?: boolean;
+}
+
+const UploadCard = React.memo(function UploadCard({ disabled = false }: UploadCardProps) {
   const dispatch = useAppDispatch();
   const { parseProject, isParsing, startMigration, isMigrating } = useUpload();
   const isReduced = useReducedMotion();
@@ -127,6 +132,7 @@ const UploadCard = React.memo(function UploadCard() {
   ];
 
   const loading = isParsing || isMigrating;
+  const isBlocked = disabled || loading;
 
   return (
     <Card 
@@ -165,11 +171,11 @@ const UploadCard = React.memo(function UploadCard() {
 
               {/* Drag and Drop Zone */}
               <motion.div
-                onDragEnter={handleDrag}
-                onDragOver={handleDrag}
-                onDragLeave={handleDrag}
-                onDrop={handleDrop}
-                onClick={() => inputRef.current?.click()}
+                onDragEnter={disabled ? undefined : handleDrag}
+                onDragOver={disabled ? undefined : handleDrag}
+                onDragLeave={disabled ? undefined : handleDrag}
+                onDrop={disabled ? undefined : handleDrop}
+                onClick={() => { if (!disabled) inputRef.current?.click(); }}
                 whileHover={isReduced ? {} : { scale: 1.015 }}
                 animate={
                   dragActive
@@ -189,7 +195,7 @@ const UploadCard = React.memo(function UploadCard() {
                       }
                 }
                 transition={defaultTransition}
-                className="border border-dashed rounded-xl py-12 px-6 text-center cursor-pointer relative group flex flex-col items-center justify-center min-h-[190px] border-border"
+                className={`border border-dashed rounded-xl py-12 px-6 text-center relative group flex flex-col items-center justify-center min-h-[190px] border-border ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
               >
                 <input
                   ref={inputRef}
@@ -244,9 +250,14 @@ const UploadCard = React.memo(function UploadCard() {
               )}
             </div>
 
+            {disabled && (
+              <p className="text-[10px] text-red-400 font-semibold text-center mt-2">
+                ⚠ Offline — upload unavailable
+              </p>
+            )}
             <Button
-              onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleParse(); }}
-              disabled={!file || loading}
+              onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); if (!disabled) handleParse(); }}
+              disabled={!file || isBlocked}
               loading={isParsing}
               className="w-full mt-6"
             >

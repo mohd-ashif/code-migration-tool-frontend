@@ -30,6 +30,11 @@ export const slideUp: Variants = {
     y: 0,
     transition: defaultTransition
   },
+  show: { 
+    opacity: 1, 
+    y: 0,
+    transition: defaultTransition
+  },
   exit: { 
     opacity: 0, 
     y: -10,
@@ -72,6 +77,13 @@ export const slideHorizontal: Variants = {
 export const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.02
+    }
+  },
+  show: {
     opacity: 1,
     transition: {
       staggerChildren: 0.05,

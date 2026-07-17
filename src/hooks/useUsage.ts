@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '../services/http/apiClient';
 import { UsageDto } from '../shared/types/api.types';
+import { useAppSelector } from '../store';
 
 async function fetchUsage(): Promise<UsageDto> {
   const res: any = await apiClient.get('/api/workspace/usage');
@@ -8,11 +9,14 @@ async function fetchUsage(): Promise<UsageDto> {
 }
 
 export function useUsage() {
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+
   const query = useQuery<UsageDto>({
     queryKey: ['usage'],
     queryFn: fetchUsage,
     staleTime: 60 * 1000, // Refresh every minute
     retry: 1,
+    enabled: isAuthenticated,
   });
 
   return {
