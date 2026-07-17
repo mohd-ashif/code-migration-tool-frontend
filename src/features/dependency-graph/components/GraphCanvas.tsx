@@ -117,6 +117,7 @@ export default function GraphCanvas({
         maxZoom={4}
         fitView
         fitViewOptions={{ padding: 0.15 }}
+        onlyRenderVisibleElements={true}
         attributionPosition="bottom-left"
         proOptions={{ hideAttribution: true }}
       >

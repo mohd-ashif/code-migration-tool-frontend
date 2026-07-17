@@ -11,6 +11,8 @@ import { staggerContainer, slideUp } from '../../../animations/variants';
 import { useReducedMotion } from '../../../hooks/useReducedMotion';
 import apiClient from '../../../services/http/apiClient';
 import { useQueryClient } from '@tanstack/react-query';
+import { useToast } from '../../../shared/components/NotificationToast';
+import ConfirmDialog from '../../../shared/components/ConfirmDialog';
 
 const PAGE_SIZE = 15;
 
@@ -51,9 +53,11 @@ export default function MigrationHistory() {
   const dispatch = useAppDispatch();
   const queryClient = useQueryClient();
   const isReduced = useReducedMotion();
+  const toast = useToast();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(0);
+  const [deleteJobId, setDeleteJobId] = useState<string | null>(null);
 
   const { jobs, isLoading, refetch } = useMigrationHistory({
     search,
@@ -64,7 +68,7 @@ export default function MigrationHistory() {
 
   const handleViewJob = (job: JobRecord) => {
     dispatch(setSelectedJobId(job.id));
-    dispatch(setActiveTab('dashboard'));
+    dispatch(setActiveTab('jobs'));
   };
 
   const handleRetry = (_job: JobRecord) => {
@@ -77,14 +81,21 @@ export default function MigrationHistory() {
     }, 200);
   };
 
-  const handleDelete = async (jobId: string) => {
-    if (!confirm('Delete this migration job? This cannot be undone.')) return;
+  const handleDelete = (jobId: string) => {
+    setDeleteJobId(jobId);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteJobId) return;
     try {
-      await apiClient.delete(`/api/jobs/${jobId}`);
+      await apiClient.delete(`/api/history/${deleteJobId}`);
       queryClient.invalidateQueries({ queryKey: ['migrationHistory'] });
       queryClient.invalidateQueries({ queryKey: ['recentJobs'] });
+      toast.warning('Migration job has been deleted.');
     } catch {
-      // Silently handled — job controller doesn't have delete yet
+      toast.error('Failed to delete migration job.');
+    } finally {
+      setDeleteJobId(null);
     }
   };
 
@@ -288,6 +299,18 @@ export default function MigrationHistory() {
           </button>
         </div>
       )}
+
+      {/* Reusable premium Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={deleteJobId !== null}
+        title="Delete Migration Job"
+        message="Are you sure you want to delete this migration job? This cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        isDestructive={true}
+        onConfirm={confirmDelete}
+        onClose={() => setDeleteJobId(null)}
+      />
     </div>
   );
 }

@@ -18,7 +18,7 @@ export default function ReportsList() {
 
   const handleView = (jobId: string) => {
     dispatch(setSelectedJobId(jobId));
-    dispatch(setActiveTab('dashboard'));
+    dispatch(setActiveTab('jobs'));
   };
 
   return (
