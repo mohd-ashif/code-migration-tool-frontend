@@ -10,11 +10,12 @@ export function useRecentJobs() {
     queryFn: getJobs,
     refetchInterval: 5000, // Poll list every 5 seconds
     select: (data: any) => data.jobs || [],
+    enabled: !!workspaceId,
   });
 
   return {
     jobs: query.data || [],
-    isLoading: query.isLoading,
+    isLoading: query.isLoading && !!workspaceId,
     isRefetching: query.isRefetching,
     error: query.error,
     refetch: query.refetch,

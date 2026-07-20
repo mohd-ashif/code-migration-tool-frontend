@@ -6,10 +6,14 @@ export interface UserDto {
   id: string;
   email: string;
   isEmailVerified: boolean;
+  fullName?: string | null;
+  avatarUrl?: string | null;
+  bio?: string | null;
+  company?: string | null;
   createdAt: string;
 }
 
-export type AuthView = 'login' | 'register' | 'forgot-password' | 'reset-password' | 'verify-email';
+export type AuthView = 'login' | 'register' | 'forgot-password' | 'reset-password' | 'verify-email' | 'magic-link' | 'accept-invite';
 
 interface AuthState {
   user: UserDto | null;
@@ -22,6 +26,8 @@ interface AuthState {
   authView: AuthView;
   verificationToken: string | null;
   resetToken: string | null;
+  magicToken: string | null;
+  inviteToken: string | null;
   currentWorkspace: WorkspaceDto | null;
 }
 
@@ -47,6 +53,8 @@ const initialState: AuthState = {
   authView: 'login',
   verificationToken: null,
   resetToken: null,
+  magicToken: null,
+  inviteToken: null,
   currentWorkspace: null,
 };
 
@@ -105,6 +113,14 @@ const authSlice = createSlice({
       state.resetToken = action.payload;
       state.authView = 'reset-password';
     },
+    setMagicToken: (state: AuthState, action: PayloadAction<string | null>) => {
+      state.magicToken = action.payload;
+      state.authView = 'magic-link';
+    },
+    setInviteToken: (state: AuthState, action: PayloadAction<string | null>) => {
+      state.inviteToken = action.payload;
+      state.authView = 'accept-invite';
+    },
     setAuthWorkspace: (state: AuthState, action: PayloadAction<WorkspaceDto | null>) => {
       state.currentWorkspace = action.payload;
     },
@@ -118,6 +134,8 @@ export const {
   setAuthView,
   setVerificationToken,
   setResetToken,
+  setMagicToken,
+  setInviteToken,
   setAuthWorkspace,
 } = authSlice.actions;
 

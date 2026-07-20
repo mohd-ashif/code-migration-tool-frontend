@@ -3,7 +3,7 @@ import { Keyboard, LogOut, User, Building2, Key, Settings } from 'lucide-react';
 import ShortcutContext from '../../shortcuts/shortcutContext';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { logout } from '../../store/slices/authSlice';
-import { setActiveTab } from '../../store/slices/uiSlice';
+import { setActiveTab, setSettingsSubTab } from '../../store/slices/uiSlice';
 import apiClient from '../../services/http/apiClient';
 import { RootState } from '../../store';
 
@@ -25,13 +25,20 @@ export default function Topbar() {
     }
   };
 
-  const navigateTo = (tab: any) => {
+  const navigateTo = (tab: any, subTab?: any) => {
     dispatch(setActiveTab(tab));
+    if (subTab) {
+      dispatch(setSettingsSubTab(subTab));
+    }
     setDropdownOpen(false);
   };
 
-  const userInitial = user?.email ? user.email.charAt(0).toUpperCase() : 'U';
-  const userName = user?.email?.split('@')[0] ?? 'User';
+  const userInitial = user?.fullName
+    ? user.fullName.charAt(0).toUpperCase()
+    : user?.email
+    ? user.email.charAt(0).toUpperCase()
+    : 'U';
+  const userName = user?.fullName || (user?.email?.split('@')[0] ?? 'User');
 
   return (
     <header className="h-16 border-b border-[#1E1F35] bg-darkBg/30 backdrop-blur-md sticky top-0 z-40 px-8 flex justify-between items-center select-none">
@@ -62,9 +69,14 @@ export default function Topbar() {
         <div className="relative">
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#7C6CFF] to-[#A68CFF] text-white flex items-center justify-center text-xs font-bold shadow-glow border border-[#7C6CFF]/30 cursor-pointer hover:scale-105 transition-all outline-none"
+            className="w-8 h-8 rounded-full text-white flex items-center justify-center text-xs font-bold shadow-glow border border-[#7C6CFF]/30 cursor-pointer hover:scale-105 transition-all outline-none overflow-hidden"
+            style={{ background: user?.avatarUrl?.startsWith('linear-gradient') ? user.avatarUrl : 'linear-gradient(to top right, #7C6CFF, #A68CFF)' }}
           >
-            {userInitial}
+            {user?.avatarUrl?.startsWith('http') ? (
+              <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+            ) : (
+              userInitial
+            )}
           </button>
 
           {dropdownOpen && (
@@ -74,8 +86,15 @@ export default function Topbar() {
                 {/* Profile section */}
                 <div className="px-3 py-2.5 border-b border-white/5 mb-1">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#7C6CFF] to-[#A68CFF] flex items-center justify-center text-[10px] font-bold text-white shrink-0">
-                      {userInitial}
+                    <div
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 overflow-hidden"
+                      style={{ background: user?.avatarUrl?.startsWith('linear-gradient') ? user.avatarUrl : 'linear-gradient(to top right, #7C6CFF, #A68CFF)' }}
+                    >
+                      {user?.avatarUrl?.startsWith('http') ? (
+                        <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        userInitial
+                      )}
                     </div>
                     <div className="min-w-0">
                       <p className="font-semibold text-white text-[11px] truncate">{userName}</p>
@@ -87,14 +106,14 @@ export default function Topbar() {
                 {/* Navigation links */}
                 <div className="space-y-0.5 mb-1">
                   <button
-                    onClick={() => navigateTo('dashboard')}
+                    onClick={() => navigateTo('settings', 'profile')}
                     className="w-full flex items-center gap-2.5 px-3 py-2 text-zinc-300 hover:bg-white/5 rounded-xl transition-all cursor-pointer font-medium text-[11px]"
                   >
                     <User className="w-3.5 h-3.5 text-zinc-400" />
                     Profile
                   </button>
                   <button
-                    onClick={() => navigateTo('apiKeys')}
+                    onClick={() => navigateTo('settings', 'api-keys')}
                     className="w-full flex items-center gap-2.5 px-3 py-2 text-zinc-300 hover:bg-white/5 rounded-xl transition-all cursor-pointer font-medium text-[11px]"
                   >
                     <Key className="w-3.5 h-3.5 text-zinc-400" />
@@ -108,7 +127,7 @@ export default function Topbar() {
                     Workspace
                   </button>
                   <button
-                    onClick={() => navigateTo('settings')}
+                    onClick={() => navigateTo('settings', 'security')}
                     className="w-full flex items-center gap-2.5 px-3 py-2 text-zinc-300 hover:bg-white/5 rounded-xl transition-all cursor-pointer font-medium text-[11px]"
                   >
                     <Settings className="w-3.5 h-3.5 text-zinc-400" />

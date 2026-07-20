@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useContext, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from '../shared/components/Sidebar';
 import Topbar from '../shared/components/Topbar';
@@ -7,12 +7,14 @@ import EmptyState from '../shared/components/EmptyState';
 import { Network, Loader2, FileCode2, WifiOff } from 'lucide-react';
 
 import { useAppDispatch, useAppSelector, RootState } from '../store';
-import { setActiveTab } from '../store/slices/uiSlice';
+import { setActiveTab, toggleSidebar } from '../store/slices/uiSlice';
 import {
   setCredentials,
   logout,
   setVerificationToken,
   setResetToken,
+  setMagicToken,
+  setInviteToken,
 } from '../store/slices/authSlice';
 
 // ── Eagerly loaded (above-the-fold, always needed) ────────────────────────────
@@ -27,6 +29,7 @@ const DependencyGraph  = lazy(() => import('../features/dependency-graph/compone
 const JobDetails       = lazy(() => import('../features/reports/components/JobDetails'));
 const MigrationHistory = lazy(() => import('../features/history/components/MigrationHistory'));
 const ReportsList      = lazy(() => import('../features/reports/components/ReportsList'));
+const BillingView      = lazy(() => import('../features/billing/components/BillingView'));
 
 import AuthLayout from '../features/auth/components/AuthLayout';
 import LoginForm from '../features/auth/components/LoginForm';
@@ -34,6 +37,9 @@ import RegisterForm from '../features/auth/components/RegisterForm';
 import ForgotPasswordForm from '../features/auth/components/ForgotPasswordForm';
 import ResetPasswordForm from '../features/auth/components/ResetPasswordForm';
 import VerifyEmailView from '../features/auth/components/VerifyEmailView';
+import MagicLinkView from '../features/auth/components/MagicLinkView';
+import AcceptInviteView from '../features/auth/components/AcceptInviteView';
+import SettingsView from '../features/auth/components/SettingsView';
 import apiClient from '../services/http/apiClient';
 
 import { ReduxProvider } from './providers/ReduxProvider';
@@ -99,6 +105,7 @@ function AppContent() {
   const isInitializing  = useAppSelector((state: RootState) => state.auth.isInitializing);
   const authView        = useAppSelector((state: RootState) => state.auth.authView);
   const isOffline       = useAppSelector((state: RootState) => state.ui.isOffline);
+  const inviteToken     = useAppSelector((state: RootState) => state.auth.inviteToken);
 
   const detailsRef          = useRef<HTMLDivElement>(null);
   const checkSessionStarted = useRef(false);
@@ -114,17 +121,6 @@ function AppContent() {
   const isHelpOpen   = shortcutCtx?.isHelpOpen   || false;
   const setIsHelpOpen = shortcutCtx?.setIsHelpOpen || (() => {});
 
-  // Persisted sidebar collapse state
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
-    try { return localStorage.getItem('sidebar_collapsed') === 'true'; }
-    catch { return false; }
-  });
-
-  useEffect(() => {
-    try { localStorage.setItem('sidebar_collapsed', String(isSidebarCollapsed)); }
-    catch (err) { logger.error('Failed to persist sidebar state', err); }
-  }, [isSidebarCollapsed]);
-
   // Combined loading gate — prevents UI flicker on refresh
   const isAuthLoading = isInitializing || (isAuthenticated && currentUserQuery.isLoading);
   const isAppLoading  = isAuthLoading  || (isAuthenticated && workspaceLoading);
@@ -138,6 +134,8 @@ function AppContent() {
     if (token) {
       if (mode === 'reset-password')  dispatch(setResetToken(token));
       else if (mode === 'verify-email') dispatch(setVerificationToken(token));
+      else if (mode === 'magic-link') dispatch(setMagicToken(token));
+      else if (mode === 'accept-invite') dispatch(setInviteToken(token));
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
@@ -162,7 +160,7 @@ function AppContent() {
 
   // ── Keyboard shortcuts ────────────────────────────────────────────────────
 
-  useGlobalShortcut('toggle-sidebar', () => setIsSidebarCollapsed((p: boolean) => !p));
+  useGlobalShortcut('toggle-sidebar', () => dispatch(toggleSidebar()));
   useGlobalShortcut('nav-dashboard',  () => dispatch(setActiveTab('dashboard')));
   useGlobalShortcut('nav-upload', () => {
     dispatch(setActiveTab('dashboard'));
@@ -244,6 +242,16 @@ function AppContent() {
     );
   }
 
+  // ── Workspace Invitation Intercept ─────────────────────────────────────────
+
+  if (authView === 'accept-invite' && inviteToken) {
+    return (
+      <AuthLayout title="Join Workspace" subtitle="Hold on, accepting your invitation">
+        <AcceptInviteView />
+      </AuthLayout>
+    );
+  }
+
   // ── Auth screens ──────────────────────────────────────────────────────────
 
   if (!isAuthenticated) {
@@ -253,6 +261,8 @@ function AppContent() {
         case 'forgot-password':  return 'Reset Password';
         case 'reset-password':   return 'Choose New Password';
         case 'verify-email':     return 'Verify Email';
+        case 'magic-link':       return 'Logging in...';
+        case 'accept-invite':    return 'Join Workspace';
         default:                 return 'Welcome Back';
       }
     };
@@ -262,6 +272,8 @@ function AppContent() {
         case 'forgot-password':  return 'Enter your email to receive a password reset link';
         case 'reset-password':   return 'Enter your new password below';
         case 'verify-email':     return 'Hold on, verifying your credentials';
+        case 'magic-link':       return 'Hold on, authenticating your credentials';
+        case 'accept-invite':    return 'Hold on, accepting your invitation';
         default:                 return 'Sign in to access your code migration workspace';
       }
     };
@@ -271,6 +283,8 @@ function AppContent() {
         case 'forgot-password': return <ForgotPasswordForm />;
         case 'reset-password':  return <ResetPasswordForm />;
         case 'verify-email':    return <VerifyEmailView />;
+        case 'magic-link':      return <MagicLinkView />;
+        case 'accept-invite':    return <AcceptInviteView />;
         default:                return <LoginForm />;
       }
     };
@@ -385,30 +399,13 @@ function AppContent() {
 
       case 'billing':
         return (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="p-4 bg-zinc-800/50 rounded-2xl mb-4">
-              <svg className="w-10 h-10 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-              </svg>
-            </div>
-            <h3 className="text-white font-semibold mb-1">Billing &amp; Subscription</h3>
-            <p className="text-zinc-500 text-xs max-w-xs">Billing management is coming soon. You're currently on the Free plan with 100 migrations per month.</p>
-          </div>
+          <Suspense fallback={<TabSkeleton />}>
+            <BillingView />
+          </Suspense>
         );
 
       case 'settings':
-        return (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="p-4 bg-zinc-800/50 rounded-2xl mb-4">
-              <svg className="w-10 h-10 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </div>
-            <h3 className="text-white font-semibold mb-1">Settings</h3>
-            <p className="text-zinc-500 text-xs max-w-xs">Account and workspace settings are coming soon.</p>
-          </div>
-        );
+        return <SettingsView />;
 
       default:
         return null;
@@ -426,7 +423,7 @@ function AppContent() {
 
       <div className="flex flex-1 min-h-0">
         {/* Sidebar */}
-        <Sidebar collapsed={isSidebarCollapsed} />
+        <Sidebar />
 
         {/* Main workspace */}
         <div className="flex-1 flex flex-col min-w-0">
