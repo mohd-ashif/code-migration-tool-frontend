@@ -22,9 +22,14 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use(
   (config) => {
-    const { auth } = store.getState();
+    const { auth, workspace } = store.getState();
     if (auth.accessToken) {
       config.headers['Authorization'] = `Bearer ${auth.accessToken}`;
+    }
+
+    // Attach active workspace ID to scope multi-tenant requests
+    if (workspace.currentWorkspaceId) {
+      config.headers['x-workspace-id'] = workspace.currentWorkspaceId;
     }
 
     // Inject session-scoped trace ID so requests can be correlated in logs

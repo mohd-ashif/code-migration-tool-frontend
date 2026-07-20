@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAppDispatch } from '../../../store';
 import { setCredentials, setAuthView } from '../../../store/slices/authSlice';
 import apiClient from '../../../services/http/apiClient';
-import { Lock, Mail, Loader2 } from 'lucide-react';
+import { Lock, Mail, Loader2, Key, Check } from 'lucide-react';
 
 export default function LoginForm() {
   const dispatch = useAppDispatch();
@@ -11,6 +11,10 @@ export default function LoginForm() {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  
+  // Magic link states
+  const [isMagicLink, setIsMagicLink] = useState(false);
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,20 +22,25 @@ export default function LoginForm() {
     setLoading(true);
 
     try {
-      const response: any = await apiClient.post('/api/auth/login', {
-        email,
-        password,
-      });
-
-      const { user, accessToken } = response.data;
-
-      if (rememberMe) {
-        localStorage.setItem('remembered_email', email);
+      if (isMagicLink) {
+        await apiClient.post('/api/auth/magic-link', { email });
+        setMagicLinkSent(true);
       } else {
-        localStorage.removeItem('remembered_email');
-      }
+        const response: any = await apiClient.post('/api/auth/login', {
+          email,
+          password,
+        });
 
-      dispatch(setCredentials({ user, accessToken }));
+        const { user, accessToken } = response.data;
+
+        if (rememberMe) {
+          localStorage.setItem('remembered_email', email);
+        } else {
+          localStorage.removeItem('remembered_email');
+        }
+
+        dispatch(setCredentials({ user, accessToken }));
+      }
     } catch (err: any) {
       setError(err.message || 'Login failed.');
     } finally {
@@ -46,6 +55,30 @@ export default function LoginForm() {
       setRememberMe(true);
     }
   }, []);
+
+  if (magicLinkSent) {
+    return (
+      <div className="space-y-6 text-center py-6 select-none animate-fadeIn">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 mb-2 animate-bounce">
+          <Check className="w-6 h-6" />
+        </div>
+        <h3 className="text-lg font-bold text-white">Check Your Email</h3>
+        <p className="text-zinc-400 text-xs leading-relaxed max-w-sm mx-auto">
+          We sent a secure magic login link to <span className="text-white font-semibold font-mono">{email}</span>. Click the link to log in instantly.
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            setMagicLinkSent(false);
+            setIsMagicLink(false);
+          }}
+          className="text-[#7C6CFF] text-xs font-bold hover:underline"
+        >
+          Back to password sign in
+        </button>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -72,43 +105,68 @@ export default function LoginForm() {
         </div>
       </div>
 
-      <div className="space-y-2">
-        <div className="flex justify-between items-center">
-          <label className="text-zinc-400 text-[11px] font-semibold tracking-wider uppercase">
-            Password
+      {!isMagicLink && (
+        <div className="space-y-2 animate-fadeIn">
+          <div className="flex justify-between items-center">
+            <label className="text-zinc-400 text-[11px] font-semibold tracking-wider uppercase">
+              Password
+            </label>
+            <button
+              type="button"
+              onClick={() => dispatch(setAuthView('forgot-password'))}
+              className="text-[#7C6CFF] text-[11px] font-bold hover:underline"
+            >
+              Forgot Password?
+            </button>
+          </div>
+          <div className="relative">
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-zinc-500" />
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-[#1A1B2D]/40 border border-white/5 focus:border-[#7C6CFF]/80 focus:ring-1 focus:ring-[#7C6CFF]/30 rounded-2xl py-3.5 pl-12 pr-4 text-sm text-white placeholder-zinc-500 outline-none transition-all"
+              placeholder="••••••••"
+            />
+          </div>
+        </div>
+      )}
+
+      {!isMagicLink && (
+        <div className="flex items-center justify-between py-1 animate-fadeIn">
+          <label className="flex items-center gap-2.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="w-4 h-4 rounded border-white/10 bg-[#1A1B2D]/40 accent-[#7C6CFF]"
+            />
+            <span className="text-zinc-400 text-xs font-medium">Remember me</span>
           </label>
+          
           <button
             type="button"
-            onClick={() => dispatch(setAuthView('forgot-password'))}
-            className="text-[#7C6CFF] text-[11px] font-bold hover:underline"
+            onClick={() => setIsMagicLink(true)}
+            className="text-[#7C6CFF] text-xs font-bold hover:underline flex items-center gap-1"
           >
-            Forgot Password?
+            <Key className="w-3.5 h-3.5" />
+            Sign in with Magic Link
           </button>
         </div>
-        <div className="relative">
-          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-zinc-500" />
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-[#1A1B2D]/40 border border-white/5 focus:border-[#7C6CFF]/80 focus:ring-1 focus:ring-[#7C6CFF]/30 rounded-2xl py-3.5 pl-12 pr-4 text-sm text-white placeholder-zinc-500 outline-none transition-all"
-            placeholder="••••••••"
-          />
-        </div>
-      </div>
+      )}
 
-      <div className="flex items-center justify-between py-1">
-        <label className="flex items-center gap-2.5 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={rememberMe}
-            onChange={(e) => setRememberMe(e.target.checked)}
-            className="w-4 h-4 rounded border-white/10 bg-[#1A1B2D]/40 accent-[#7C6CFF]"
-          />
-          <span className="text-zinc-400 text-xs font-medium">Remember me</span>
-        </label>
-      </div>
+      {isMagicLink && (
+        <div className="flex justify-end py-1 animate-fadeIn">
+          <button
+            type="button"
+            onClick={() => setIsMagicLink(false)}
+            className="text-[#7C6CFF] text-xs font-bold hover:underline"
+          >
+            Sign in with password
+          </button>
+        </div>
+      )}
 
       <button
         type="submit"
@@ -118,10 +176,10 @@ export default function LoginForm() {
         {loading ? (
           <>
             <Loader2 className="w-4 h-4 animate-spin" />
-            Signing in...
+            {isMagicLink ? 'Sending Link...' : 'Signing in...'}
           </>
         ) : (
-          'Sign In'
+          isMagicLink ? 'Send Magic Link' : 'Sign In'
         )}
       </button>
 

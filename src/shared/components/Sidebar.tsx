@@ -1,5 +1,6 @@
 import { LayoutDashboard, Network, ClipboardList, Settings, Key, FileCode2, History, FileText, CreditCard } from 'lucide-react';
 import Progress from './Progress';
+import WorkspaceSelector from './WorkspaceSelector';
 import { useAppDispatch, useAppSelector, RootState } from '../../store';
 import { setActiveTab, ActiveTab } from '../../store/slices/uiSlice';
 import { motion } from 'framer-motion';
@@ -7,14 +8,10 @@ import { defaultTransition } from '../../animations/variants';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useUsage } from '../../hooks/useUsage';
 
-interface SidebarProps {
-  collapsed?: boolean;
-}
-
-export default function Sidebar({ collapsed = false }: SidebarProps) {
+export default function Sidebar() {
   const dispatch = useAppDispatch();
   const activeTab = useAppSelector((state: RootState) => state.ui.activeTab);
-  const workspaceName = useAppSelector((state: RootState) => state.workspace.currentWorkspaceName);
+  const collapsed = useAppSelector((state: RootState) => state.ui.isSidebarCollapsed);
   const isReduced = useReducedMotion();
   const { usage } = useUsage();
 
@@ -54,15 +51,8 @@ export default function Sidebar({ collapsed = false }: SidebarProps) {
           )}
         </div>
 
-        {/* Workspace Badge */}
-        {!collapsed && workspaceName && (
-          <div className="mb-5 px-2">
-            <div className="flex items-center gap-2 px-3 py-2 bg-primary/5 border border-primary/15 rounded-xl">
-              <div className="w-2 h-2 rounded-full bg-primary/70 shrink-0" />
-              <span className="text-[11px] font-semibold text-primary/90 truncate">{workspaceName}</span>
-            </div>
-          </div>
-        )}
+        {/* Workspace Selector Dropdown */}
+        <WorkspaceSelector collapsed={collapsed} />
 
         {/* Menu Categories */}
         <nav className="space-y-5 flex-1">

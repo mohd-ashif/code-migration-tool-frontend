@@ -8,7 +8,7 @@ import { WorkspaceDto } from '../shared/types/api.types';
 
 async function fetchWorkspace(): Promise<WorkspaceDto> {
   const res: any = await apiClient.get('/api/workspace/me');
-  return res.data;
+  return res.workspace || res.data;
 }
 
 export function useWorkspace() {
@@ -26,7 +26,11 @@ export function useWorkspace() {
   // Sync workspace name/id into Redux UI state whenever resolved
   useEffect(() => {
     if (query.data) {
-      dispatch(setCurrentWorkspace({ id: query.data.id, name: query.data.name }));
+      dispatch(setCurrentWorkspace({ 
+        id: query.data.id, 
+        name: query.data.name, 
+        role: (query.data as any).role 
+      }));
       dispatch(setAuthWorkspace(query.data));
     }
   }, [query.data, dispatch]);
