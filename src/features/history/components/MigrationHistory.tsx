@@ -11,8 +11,8 @@ import { staggerContainer, slideUp } from '../../../animations/variants';
 import { useReducedMotion } from '../../../hooks/useReducedMotion';
 import apiClient from '../../../services/http/apiClient';
 import { useQueryClient } from '@tanstack/react-query';
-import { useToast } from '../../../shared/components/NotificationToast';
 import ConfirmDialog from '../../../shared/components/ConfirmDialog';
+import { toast } from '../../../services/toast/toast.service';
 
 const PAGE_SIZE = 15;
 
@@ -53,7 +53,6 @@ export default function MigrationHistory() {
   const dispatch = useAppDispatch();
   const queryClient = useQueryClient();
   const isReduced = useReducedMotion();
-  const toast = useToast();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(0);

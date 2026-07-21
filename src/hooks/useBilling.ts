@@ -18,8 +18,8 @@ export function usePlans() {
   return useQuery({
     queryKey: ['billingPlans'],
     queryFn: async () => {
-      const { data } = await apiClient.get('/api/billing/plans');
-      return data.plans;
+      const res: any = await apiClient.get('/api/billing/plans');
+      return res.plans;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
@@ -29,8 +29,8 @@ export function useSubscription(workspaceId?: string) {
   return useQuery({
     queryKey: ['billingSubscription', workspaceId],
     queryFn: async () => {
-      const { data } = await apiClient.get('/api/billing/subscription');
-      return data.subscription;
+      const res: any = await apiClient.get('/api/billing/subscription');
+      return res.subscription;
     },
     enabled: !!workspaceId || true,
   });
@@ -40,8 +40,8 @@ export function useUsage(workspaceId?: string) {
   return useQuery({
     queryKey: ['billingUsage', workspaceId],
     queryFn: async () => {
-      const { data } = await apiClient.get('/api/billing/usage');
-      return data.usage;
+      const res: any = await apiClient.get('/api/billing/usage');
+      return res.usage;
     },
     enabled: !!workspaceId || true,
   });
@@ -51,8 +51,8 @@ export function useInvoices(workspaceId?: string) {
   return useQuery({
     queryKey: ['billingInvoices', workspaceId],
     queryFn: async () => {
-      const { data } = await apiClient.get('/api/billing/invoices');
-      return data.invoices;
+      const res: any = await apiClient.get('/api/billing/invoices');
+      return res.invoices;
     },
     enabled: !!workspaceId || true,
   });
@@ -62,8 +62,8 @@ export function usePayments(workspaceId?: string) {
   return useQuery({
     queryKey: ['billingPayments', workspaceId],
     queryFn: async () => {
-      const { data } = await apiClient.get('/api/billing/payments');
-      return data.payments || [];
+      const res: any = await apiClient.get('/api/billing/payments');
+      return res.payments || [];
     },
     enabled: !!workspaceId || true,
   });
@@ -77,8 +77,8 @@ export function useCheckout() {
       billingAddress: SubscriptionAddress;
       couponCode?: string;
     }) => {
-      const { data } = await apiClient.post('/api/billing/checkout', payload);
-      return data.checkout;
+      const res: any = await apiClient.post('/api/billing/checkout', payload);
+      return res.checkout;
     },
   });
 }
@@ -92,8 +92,8 @@ export function useBilling() {
       signature: string;
       subscriptionId: string;
     }) => {
-      const { data } = await apiClient.post('/api/billing/verify', payload);
-      return data;
+      const res: any = await apiClient.post('/api/billing/verify', payload);
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['billingSubscription'] });
@@ -104,8 +104,8 @@ export function useBilling() {
 
   const cancelSubscription = useMutation({
     mutationFn: async () => {
-      const { data } = await apiClient.post('/api/billing/cancel');
-      return data;
+      const res: any = await apiClient.post('/api/billing/cancel');
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['billingSubscription'] });
@@ -114,8 +114,8 @@ export function useBilling() {
 
   const resumeSubscription = useMutation({
     mutationFn: async () => {
-      const { data } = await apiClient.post('/api/billing/resume');
-      return data;
+      const res: any = await apiClient.post('/api/billing/resume');
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['billingSubscription'] });
@@ -124,9 +124,19 @@ export function useBilling() {
 
   const applyCoupon = useMutation({
     mutationFn: async (code: string) => {
-      const { data } = await apiClient.post('/api/billing/apply-coupon', { code });
-      return data.coupon;
+      const res: any = await apiClient.post('/api/billing/apply-coupon', { code });
+      return res.coupon;
     },
+  });
+
+  const saveAddress = useMutation({
+    mutationFn: async (payload: SubscriptionAddress) => {
+      const res: any = await apiClient.post('/api/billing/address', payload);
+      return res.address;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['billingSubscription'] });
+    }
   });
 
   return {
@@ -134,5 +144,6 @@ export function useBilling() {
     cancelSubscription,
     resumeSubscription,
     applyCoupon,
+    saveAddress,
   };
 }

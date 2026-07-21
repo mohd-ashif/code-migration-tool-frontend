@@ -6,12 +6,11 @@
 import { useEffect, useRef } from 'react';
 import { useAppDispatch } from '../store';
 import { setOfflineStatus } from '../store/slices/uiSlice';
-import { useToast } from '../shared/components/NotificationToast';
+import { toast } from '../services/toast/toast.service';
 import { logger } from '../utils/logger';
 
 export function useOffline(): void {
   const dispatch = useAppDispatch();
-  const toast = useToast();
   // Avoid toasting on the initial mount (the page is presumably online already)
   const mounted = useRef(false);
 
@@ -44,5 +43,5 @@ export function useOffline(): void {
       window.removeEventListener('online',  handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [dispatch, toast]);
+  }, [dispatch]);
 }

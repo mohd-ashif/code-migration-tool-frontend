@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Check, Sparkles, AlertTriangle, ShieldCheck, Download, Percent } from 'lucide-react';
+import { Sparkles, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { useAppSelector } from '../../../store';
 import Card from '../../../shared/components/Card';
 import Badge from '../../../shared/components/Badge';
 import Progress from '../../../shared/components/Progress';
+import Button from '../../../components/common/Button';
 import {
   usePlans,
   useSubscription,
@@ -14,12 +15,12 @@ import {
   SubscriptionAddress
 } from '../../../hooks/useBilling';
 
-const INDIAN_STATES = [
-  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 'Haryana',
-  'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
-  'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana',
-  'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Delhi', 'Jammu and Kashmir', 'Ladakh'
-];
+// Import subcomponents
+import PricingGrid from './PricingGrid';
+import BillingAddressForm from './BillingAddressForm';
+import PromoCouponSection from './PromoCouponSection';
+import InvoicesList from './InvoicesList';
+import SimulatedPaymentModal from './SimulatedPaymentModal';
 
 export default function BillingView() {
   const workspaceId = useAppSelector((state) => state.workspace.currentWorkspaceId);
@@ -33,7 +34,7 @@ export default function BillingView() {
 
   // Mutations
   const checkoutMutation = useCheckout();
-  const { verifyPayment, cancelSubscription, resumeSubscription, applyCoupon } = useBilling();
+  const { verifyPayment, cancelSubscription, resumeSubscription, applyCoupon, saveAddress } = useBilling();
 
   // Component States
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
@@ -41,6 +42,8 @@ export default function BillingView() {
   const [couponDiscount, setCouponDiscount] = useState<any | null>(null);
   const [couponError, setCouponError] = useState('');
   const [couponSuccess, setCouponSuccess] = useState('');
+  const [showMockPaymentModal, setShowMockPaymentModal] = useState(false);
+  const [mockPaymentDetails, setMockPaymentDetails] = useState<any | null>(null);
   
   // Billing Address States
   const [address, setAddress] = useState<SubscriptionAddress>({
@@ -59,6 +62,7 @@ export default function BillingView() {
   const [addressSaved, setAddressSaved] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
   const [loadingRazorpay, setLoadingRazorpay] = useState(false);
+  const [activeCheckoutPlan, setActiveCheckoutPlan] = useState<string | null>(null);
 
   // Sync address form with existing sub address if available
   useEffect(() => {
@@ -88,8 +92,19 @@ export default function BillingView() {
       }
       const script = document.createElement('script');
       script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
+      
+      const timeout = setTimeout(() => {
+        resolve(false);
+      }, 5000); // 5 seconds script-load timeout
+
+      script.onload = () => {
+        clearTimeout(timeout);
+        resolve(true);
+      };
+      script.onerror = () => {
+        clearTimeout(timeout);
+        resolve(false);
+      };
       document.body.appendChild(script);
     });
   };
@@ -108,22 +123,51 @@ export default function BillingView() {
     }
   };
 
+  const handleSimulatePaymentSuccess = async () => {
+    if (!mockPaymentDetails) return;
+    try {
+      setLoadingRazorpay(true);
+      if (mockPaymentDetails?.planSlug) {
+        setActiveCheckoutPlan(mockPaymentDetails.planSlug);
+      }
+      setShowMockPaymentModal(false);
+      await verifyPayment.mutateAsync({
+        paymentId: `pay_mock_${Math.random().toString(36).substring(2, 12)}`,
+        signature: 'mock_signature_success',
+        subscriptionId: mockPaymentDetails.subscriptionId,
+      });
+      await refetchSub();
+      await refetchUsage();
+      await refetchInvoices();
+      setCouponDiscount(null);
+      setCouponCode('');
+    } catch (verifyErr: any) {
+      setCheckoutError('Simulated payment verification failed.');
+    } finally {
+      setLoadingRazorpay(false);
+      setActiveCheckoutPlan(null);
+      setMockPaymentDetails(null);
+    }
+  };
+
+  const handleSimulatePaymentFailure = () => {
+    setShowMockPaymentModal(false);
+    setMockPaymentDetails(null);
+    setCheckoutError('Simulated payment was cancelled.');
+  };
+
   const handleCheckout = async (planSlug: string) => {
     try {
       setCheckoutError('');
       setLoadingRazorpay(true);
+      setActiveCheckoutPlan(planSlug);
 
       // Validate address
       if (!address.addressLine1 || !address.city || !address.state || !address.pinCode) {
         setCheckoutError('Please fill out and save your billing address details before upgrading.');
         setLoadingRazorpay(false);
+        setActiveCheckoutPlan(null);
         return;
-      }
-
-      // Load Razorpay Script
-      const scriptLoaded = await loadRazorpayScript();
-      if (!scriptLoaded) {
-        throw new Error('Failed to load Razorpay Payment Gateway. Check your internet connection.');
       }
 
       // Call Backend Checkout API
@@ -133,6 +177,20 @@ export default function BillingView() {
         billingAddress: address,
         couponCode: couponDiscount?.code || undefined,
       });
+
+      if (checkoutData.isMock) {
+        setMockPaymentDetails({ ...checkoutData, planSlug });
+        setShowMockPaymentModal(true);
+        setLoadingRazorpay(false);
+        setActiveCheckoutPlan(null);
+        return;
+      }
+
+      // Load Razorpay Script
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        throw new Error('Failed to load Razorpay Payment Gateway. Check your internet connection.');
+      }
 
       // Configure Razorpay Options
       const options = {
@@ -150,6 +208,7 @@ export default function BillingView() {
         handler: async (response: any) => {
           try {
             setLoadingRazorpay(true);
+            setActiveCheckoutPlan(planSlug);
             await verifyPayment.mutateAsync({
               paymentId: response.razorpay_payment_id,
               signature: response.razorpay_signature,
@@ -164,11 +223,13 @@ export default function BillingView() {
             setCheckoutError('Payment completed, but verification failed. Contact support.');
           } finally {
             setLoadingRazorpay(false);
+            setActiveCheckoutPlan(null);
           }
         },
         modal: {
           ondismiss: () => {
             setLoadingRazorpay(false);
+            setActiveCheckoutPlan(null);
           },
         },
         theme: {
@@ -181,6 +242,7 @@ export default function BillingView() {
     } catch (err: any) {
       setCheckoutError(err.response?.data?.message || err.message || 'Checkout failed.');
       setLoadingRazorpay(false);
+      setActiveCheckoutPlan(null);
     }
   };
 
@@ -232,23 +294,21 @@ export default function BillingView() {
         
         {/* Toggle Billing Cycle */}
         <div className="flex bg-[#121324] border border-zinc-800 rounded-xl p-1 self-start md:self-center">
-          <button
+          <Button
             onClick={() => setBillingCycle('monthly')}
-            className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
-              billingCycle === 'monthly' ? 'bg-[#7C6CFF] text-white shadow-glow-sm' : 'text-zinc-400 hover:text-white'
-            }`}
+            variant={billingCycle === 'monthly' ? 'primary' : 'ghost'}
+            className="px-4 py-2 font-semibold"
           >
             Monthly Billing
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setBillingCycle('yearly')}
-            className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-              billingCycle === 'yearly' ? 'bg-[#7C6CFF] text-white shadow-glow-sm' : 'text-zinc-400 hover:text-white'
-            }`}
+            variant={billingCycle === 'yearly' ? 'primary' : 'ghost'}
+            className="px-4 py-2 font-semibold flex items-center gap-1.5"
           >
             Yearly Billing
-            <span className="bg-success/20 text-success text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase">Save 15%</span>
-          </button>
+            <span className="bg-success/20 text-success text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase font-mono">Save 15%</span>
+          </Button>
         </div>
       </div>
 
@@ -269,7 +329,7 @@ export default function BillingView() {
         <Card className="lg:col-span-1 border-zinc-800/80 bg-[#0B0B14]">
           <div className="flex flex-col h-full justify-between space-y-6">
             <div>
-              <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Current Subscription</span>
+              <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold font-mono">Current Subscription</span>
               <h3 className="text-3xl font-extrabold text-white mt-1 capitalize">
                 {isPaidUser ? subscription.plan.name : 'Free Tier'}
               </h3>
@@ -299,7 +359,7 @@ export default function BillingView() {
                   </div>
                 </>
               ) : (
-                <div className="bg-[#121324] border border-zinc-800 rounded-xl p-3 text-center">
+                <div className="bg-[#121324] border border-zinc-800/80 rounded-xl p-3 text-center">
                   <p className="text-zinc-400 text-xs">Upgrade to unlock priority processing, unlimited migrations, and API integrations.</p>
                 </div>
               )}
@@ -308,19 +368,21 @@ export default function BillingView() {
             {isPaidUser && (
               <div className="border-t border-zinc-800/50 pt-4">
                 {subscription.cancelAt ? (
-                  <button
+                  <Button
                     onClick={handleResumeSub}
-                    className="w-full py-2.5 bg-success/15 hover:bg-success/20 border border-success/30 text-success rounded-xl text-xs font-bold transition-all"
+                    variant="solid"
+                    className="w-full py-2.5 bg-success/15 hover:bg-success/20 border border-success/30 text-success rounded-xl text-xs font-bold"
                   >
                     Resume Subscription
-                  </button>
+                  </Button>
                 ) : (
-                  <button
+                  <Button
                     onClick={handleCancelSub}
-                    className="w-full py-2.5 bg-destructive/10 hover:bg-destructive/15 border border-destructive/20 text-destructive rounded-xl text-xs font-bold transition-all"
+                    variant="danger"
+                    className="w-full py-2.5 bg-destructive/10 hover:bg-destructive/15 border border-destructive/20 text-destructive rounded-xl text-xs font-bold"
                   >
                     Cancel Subscription
-                  </button>
+                  </Button>
                 )}
               </div>
             )}
@@ -379,306 +441,52 @@ export default function BillingView() {
         </Card>
       </div>
 
-      {/* Tiers Pricing Grid */}
-      <div className="space-y-6">
-        <h3 className="text-xl font-extrabold text-white">Choose Your Subscription Tier</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {plans?.map((plan: any) => {
-            const isCurrent = currentPlanSlug === plan.slug;
-            const price = billingCycle === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice;
-            const priceLabel = billingCycle === 'yearly' ? 'year' : 'month';
-            
-            if (plan.slug === 'free') return null; // free already defined or skipped
-
-            return (
-              <Card
-                key={plan.id}
-                className={`relative flex flex-col justify-between h-full bg-[#0B0B14] transition-all border-zinc-800 ${
-                  isCurrent ? 'ring-2 ring-primary border-transparent' : ''
-                }`}
-                glow={isCurrent}
-              >
-                {isCurrent && (
-                  <div className="absolute top-0 right-0 bg-[#7C6CFF] text-white text-[10px] font-extrabold px-3 py-1.5 rounded-bl-xl uppercase tracking-wider">
-                    Current Plan
-                  </div>
-                )}
-                
-                <div className="space-y-6">
-                  <div>
-                    <h4 className="text-lg font-extrabold text-white capitalize">{plan.name}</h4>
-                    <p className="text-zinc-500 text-xs mt-1.5 min-h-[32px]">{plan.description}</p>
-                  </div>
-
-                  <div className="flex items-baseline text-white">
-                    <span className="text-4xl font-extrabold">₹{price}</span>
-                    <span className="text-zinc-500 text-xs ml-1 font-semibold">/{priceLabel}</span>
-                  </div>
-
-                  <ul className="space-y-3 border-t border-zinc-800/60 pt-4">
-                    {plan.features?.map((feat: any, idx: number) => {
-                      if (feat.value === 'false') return null;
-                      
-                      let resolvedLabel = feat.key.replace('_', ' ');
-                      if (feat.key === 'migrations_limit') {
-                        resolvedLabel = feat.value === '-1' ? 'Unlimited migrations' : `${feat.value} migrations/month`;
-                      } else if (feat.key === 'storage_limit_bytes') {
-                        resolvedLabel = `${(parseInt(feat.value) / 1024 / 1024 / 1024).toFixed(0)} GB storage`;
-                      } else if (feat.value === 'true') {
-                        resolvedLabel = feat.key.split('_').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-                      }
-
-                      return (
-                        <li key={idx} className="flex items-center gap-2 text-xs text-zinc-300">
-                          <Check className="w-4 h-4 text-[#7C6CFF] flex-shrink-0" />
-                          <span className="capitalize">{resolvedLabel}</span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-
-                <div className="mt-8">
-                  <button
-                    disabled={isCurrent || loadingRazorpay}
-                    onClick={() => handleCheckout(plan.slug)}
-                    className={`w-full py-3 rounded-xl text-xs font-bold transition-all ${
-                      isCurrent
-                        ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
-                        : 'bg-primary hover:bg-[#6857FF] text-white shadow-glow-sm'
-                    }`}
-                  >
-                    {loadingRazorpay ? 'Opening Razorpay Gateway...' : isCurrent ? 'Active Plan' : `Upgrade to ${plan.name}`}
-                  </button>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
+      {/* Pricing Cards Grid */}
+      <PricingGrid
+        plans={plans || []}
+        currentPlanSlug={currentPlanSlug}
+        billingCycle={billingCycle}
+        loadingRazorpay={loadingRazorpay}
+        activeCheckoutPlan={activeCheckoutPlan}
+        mockPaymentDetails={mockPaymentDetails}
+        handleCheckout={handleCheckout}
+      />
 
       {/* Address & Coupon Side by Side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        
-        {/* Address and GST details */}
-        <Card className="bg-[#0B0B14] border-zinc-800/80 space-y-4">
-          <h3 className="text-md font-bold text-white flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-primary" /> Billing Address &amp; GST Details
-          </h3>
-          <p className="text-zinc-500 text-xs">GST Number is required to claim Input Tax Credit (ITC) for business purchases.</p>
+        <BillingAddressForm
+          address={address}
+          setAddress={setAddress}
+          addressSaved={addressSaved}
+          setAddressSaved={setAddressSaved}
+          saveAddress={saveAddress}
+        />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[11px] font-bold text-zinc-400 uppercase">Company Name</label>
-              <input
-                type="text"
-                value={address.companyName}
-                onChange={(e) => {
-                  setAddress({ ...address, companyName: e.target.value });
-                  setAddressSaved(false);
-                }}
-                className="w-full bg-[#121324] border border-zinc-800 rounded-xl px-3 py-2 text-white text-xs mt-1 focus:border-[#7C6CFF] outline-none"
-                placeholder="e.g. Acme Tech Private Limited"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] font-bold text-zinc-400 uppercase">GSTIN (GST Number)</label>
-              <input
-                type="text"
-                maxLength={15}
-                value={address.gstNumber}
-                onChange={(e) => {
-                  setAddress({ ...address, gstNumber: e.target.value.toUpperCase() });
-                  setAddressSaved(false);
-                }}
-                className="w-full bg-[#121324] border border-zinc-800 rounded-xl px-3 py-2 text-white text-xs mt-1 focus:border-[#7C6CFF] outline-none"
-                placeholder="e.g. 29ABCDE1234F1Z5"
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-[11px] font-bold text-zinc-400 uppercase">Billing Address</label>
-              <input
-                type="text"
-                value={address.addressLine1}
-                onChange={(e) => {
-                  setAddress({ ...address, addressLine1: e.target.value });
-                  setAddressSaved(false);
-                }}
-                className="w-full bg-[#121324] border border-zinc-800 rounded-xl px-3 py-2 text-white text-xs mt-1 focus:border-[#7C6CFF] outline-none"
-                placeholder="Street address, building, suite"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] font-bold text-zinc-400 uppercase">City</label>
-              <input
-                type="text"
-                value={address.city}
-                onChange={(e) => {
-                  setAddress({ ...address, city: e.target.value });
-                  setAddressSaved(false);
-                }}
-                className="w-full bg-[#121324] border border-zinc-800 rounded-xl px-3 py-2 text-white text-xs mt-1 focus:border-[#7C6CFF] outline-none"
-                placeholder="e.g. Bangalore"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] font-bold text-zinc-400 uppercase">State</label>
-              <select
-                value={address.state}
-                onChange={(e) => {
-                  setAddress({ ...address, state: e.target.value });
-                  setAddressSaved(false);
-                }}
-                className="w-full bg-[#121324] border border-zinc-800 rounded-xl px-3 py-2 text-white text-xs mt-1 focus:border-[#7C6CFF] outline-none"
-              >
-                {INDIAN_STATES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-[11px] font-bold text-zinc-400 uppercase">PIN Code</label>
-              <input
-                type="text"
-                maxLength={6}
-                value={address.pinCode}
-                onChange={(e) => {
-                  setAddress({ ...address, pinCode: e.target.value.replace(/\D/g, '') });
-                  setAddressSaved(false);
-                }}
-                className="w-full bg-[#121324] border border-zinc-800 rounded-xl px-3 py-2 text-white text-xs mt-1 focus:border-[#7C6CFF] outline-none"
-                placeholder="6-digit ZIP code"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] font-bold text-zinc-400 uppercase">Contact Phone</label>
-              <input
-                type="text"
-                value={address.phone || ''}
-                onChange={(e) => {
-                  setAddress({ ...address, phone: e.target.value });
-                  setAddressSaved(false);
-                }}
-                className="w-full bg-[#121324] border border-zinc-800 rounded-xl px-3 py-2 text-white text-xs mt-1 focus:border-[#7C6CFF] outline-none"
-                placeholder="e.g. +91 99000 00000"
-              />
-            </div>
-          </div>
-
-          <div className="pt-3">
-            <button
-              onClick={() => {
-                if (!address.addressLine1 || !address.city || !address.state || !address.pinCode) {
-                  alert('Address, City, State and PIN Code are required.');
-                  return;
-                }
-                setAddressSaved(true);
-              }}
-              className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all border ${
-                addressSaved
-                  ? 'bg-success/15 border-success/30 text-success'
-                  : 'bg-zinc-800 hover:bg-zinc-700 text-white border-transparent'
-              }`}
-            >
-              {addressSaved ? '✓ Billing Details Saved Locally' : 'Save Billing Details'}
-            </button>
-          </div>
-        </Card>
-
-        {/* Coupons */}
-        <Card className="bg-[#0B0B14] border-zinc-800/80 flex flex-col justify-between space-y-4">
-          <div>
-            <h3 className="text-md font-bold text-white flex items-center gap-2">
-              <Percent className="w-5 h-5 text-primary" /> Apply Promo / Coupon Code
-            </h3>
-            <p className="text-zinc-500 text-xs mt-1">Enter a valid promotion code to claim discount discounts on active paid plans.</p>
-
-            <div className="flex gap-2 mt-4">
-              <input
-                type="text"
-                value={couponCode}
-                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                className="flex-grow bg-[#121324] border border-zinc-800 rounded-xl px-3 py-2 text-white text-xs focus:border-[#7C6CFF] outline-none"
-                placeholder="e.g. SAVE15"
-              />
-              <button
-                onClick={handleApplyCoupon}
-                className="px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-xs font-bold text-white transition-all"
-              >
-                Apply
-              </button>
-            </div>
-
-            {couponError && <p className="text-destructive text-xs mt-2">{couponError}</p>}
-            {couponSuccess && <p className="text-success text-xs mt-2">{couponSuccess}</p>}
-          </div>
-
-          <div className="bg-[#121324] border border-zinc-800/80 rounded-xl p-3 text-xs text-zinc-400">
-            <span className="font-semibold text-white block mb-1">Standard Discounts:</span>
-            Apply code <span className="font-bold text-primary">WELCOME100</span> to save ₹100 on your first subscription month, or <span className="font-bold text-primary">FESTIVE25</span> for 25% off.
-          </div>
-        </Card>
+        <PromoCouponSection
+          couponCode={couponCode}
+          setCouponCode={setCouponCode}
+          handleApplyCoupon={handleApplyCoupon}
+          couponError={couponError}
+          couponSuccess={couponSuccess}
+          applyCouponLoading={applyCoupon.isPending}
+        />
       </div>
 
       {/* Invoices List */}
-      <Card className="bg-[#0B0B14] border-zinc-800/80 space-y-4">
-        <h3 className="text-md font-bold text-white">Payment Invoices</h3>
-        <p className="text-zinc-500 text-xs">Past transactions and GST tax invoices. Click download to get copies.</p>
+      <InvoicesList invoices={invoices || []} />
 
-        <div className="overflow-x-auto">
-          {invoices && invoices.length > 0 ? (
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-zinc-800 text-zinc-500">
-                  <th className="py-3 font-semibold">Invoice No</th>
-                  <th className="py-3 font-semibold">Date</th>
-                  <th className="py-3 font-semibold">Subtotal</th>
-                  <th className="py-3 font-semibold">GST Taxes</th>
-                  <th className="py-3 font-semibold">Grand Total</th>
-                  <th className="py-3 font-semibold">Status</th>
-                  <th className="py-3 font-semibold text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-800/40 text-zinc-300">
-                {invoices.map((inv: any) => {
-                  const taxes = parseFloat(inv.cgst) + parseFloat(inv.sgst) + parseFloat(inv.igst);
-                  return (
-                    <tr key={inv.id} className="hover:bg-zinc-800/10">
-                      <td className="py-4 font-mono font-semibold text-white">{inv.invoiceNumber}</td>
-                      <td className="py-4">
-                        {new Date(inv.createdAt).toLocaleDateString('en-IN', { dateStyle: 'medium' })}
-                      </td>
-                      <td className="py-4">₹{parseFloat(inv.subtotal).toFixed(2)}</td>
-                      <td className="py-4">₹{taxes.toFixed(2)}</td>
-                      <td className="py-4 font-bold text-white">₹{parseFloat(inv.total).toFixed(2)}</td>
-                      <td className="py-4">
-                        <Badge status="completed" label={inv.status} />
-                      </td>
-                      <td className="py-4 text-right">
-                        {inv.pdfUrl ? (
-                          <a
-                            href={inv.pdfUrl}
-                            download
-                            className="inline-flex items-center gap-1 text-primary hover:text-white font-bold"
-                          >
-                            <Download className="w-3.5 h-3.5" /> Download PDF
-                          </a>
-                        ) : (
-                          <span className="text-zinc-500">Generating...</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          ) : (
-            <div className="py-8 text-center text-zinc-500">
-              No subscription payments recorded yet for this workspace.
-            </div>
-          )}
-        </div>
-      </Card>
+      {/* Sandbox Simulator Modal */}
+      <SimulatedPaymentModal
+        isOpen={showMockPaymentModal}
+        mockPaymentDetails={mockPaymentDetails}
+        billingCycle={billingCycle}
+        onSuccess={handleSimulatePaymentSuccess}
+        onDecline={handleSimulatePaymentFailure}
+        onCancel={() => {
+          setShowMockPaymentModal(false);
+          setMockPaymentDetails(null);
+        }}
+      />
 
     </div>
   );
