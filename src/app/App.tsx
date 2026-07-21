@@ -17,7 +17,7 @@ import {
   setInviteToken,
 } from '../store/slices/authSlice';
 
-// ── Eagerly loaded (above-the-fold, always needed) ────────────────────────────
+// ── Eagerly loaded (above-the-fold, always needed) ──
 import UploadCard from '../features/upload/components/UploadCard';
 import RecentJobsCard from '../features/jobs/components/RecentJobsCard';
 import TargetFrameworks from '../features/migration/components/TargetFrameworks';
@@ -47,7 +47,7 @@ import { QueryProvider, queryClient } from './providers/QueryProvider';
 import { ErrorBoundary } from './providers/ErrorBoundary';
 import { ThemeProvider, useTheme } from '../lib/ThemeContext';
 import { fadeIn, defaultTransition } from '../animations/variants';
-import { ToastProvider } from '../shared/components/NotificationToast';
+import { ToastProvider } from '../components/common/Toast';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useOffline } from '../hooks/useOffline';

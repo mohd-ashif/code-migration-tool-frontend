@@ -12,16 +12,19 @@ import { staggerContainer, slideUp, springTransition } from '../../../animations
 import { useReducedMotion } from '../../../hooks/useReducedMotion';
 import ShortcutContext from '../../../shortcuts/shortcutContext';
 
-const RecentJobsCard = memo(function RecentJobsCard() {
-  const dispatch = useAppDispatch();
-  const selectedJobId = useAppSelector((state: RootState) => state.workspace.selectedJobId);
-  const { jobs, isLoading } = useRecentJobs();
-  const isReduced = useReducedMotion();
+interface JobListItemProps {
+  job: JobRecord;
+  isSelected: boolean;
+  onClick: () => void;
+  isReduced: boolean;
+}
 
-  const shortcutCtx = useContext(ShortcutContext);
-  const pushContext = shortcutCtx?.pushContext || (() => {});
-  const popContext = shortcutCtx?.popContext || (() => {});
-
+const JobListItem = memo(function JobListItem({
+  job,
+  isSelected,
+  onClick,
+  isReduced,
+}: JobListItemProps) {
   const getIconForStatus = (status: string) => {
     const baseStyle = "w-4 h-4";
     if (status === 'completed') {
@@ -44,6 +47,76 @@ const RecentJobsCard = memo(function RecentJobsCard() {
       </div>
     );
   };
+
+  return (
+    <motion.div
+      layout={isReduced ? "position" : true}
+      variants={slideUp}
+      exit={{ opacity: 0, scale: 0.95, y: -10 }}
+      transition={springTransition}
+      whileHover={isReduced ? {} : { scale: 1.015, y: -1, zIndex: 10 }}
+      whileTap={isReduced ? {} : { scale: 0.985 }}
+      onClick={onClick}
+      tabIndex={0}
+      role="listitem"
+      aria-selected={isSelected}
+      data-job-id={job.id}
+      data-download-url={getDownloadUrl(job.id)}
+      className={`job-list-item py-3 px-2.5 flex justify-between items-center group transition-all duration-200 rounded-xl cursor-pointer border focus:outline-none focus:ring-2 focus:ring-primary ${
+        isSelected
+          ? 'bg-primary/5 border-primary/45 shadow-glow'
+          : 'bg-card/25 border-border hover:bg-accent/40'
+      }`}
+    >
+      {/* Left side details */}
+      <div className="flex items-center gap-3 w-3/5">
+        {getIconForStatus(job.status)}
+        <div className="min-w-0 flex-1">
+          <span className="font-mono text-xs text-foreground font-bold block truncate" title={job.id}>
+            {job.id}
+          </span>
+          <span className="text-[10px] text-muted-foreground font-mono mt-1 flex items-center gap-1.5">
+            <span>target: <strong className="text-foreground font-bold">{job.result?.targetFramework || 'N/A'}</strong></span>
+            {job.result?.metadata?.fileCount !== undefined && (
+              <>
+                <span>•</span>
+                <span>{job.result.metadata.fileCount} files</span>
+              </>
+            )}
+          </span>
+        </div>
+      </div>
+
+      {/* Right side status and download */}
+      <div className="flex items-center gap-2 shrink-0">
+        <Badge status={job.status} />
+        
+        {job.status === 'completed' && (
+          <a
+            href={getDownloadUrl(job.id)}
+            onClick={(e) => e.stopPropagation()}
+            className="p-2 bg-[#12131F] text-muted-foreground hover:text-foreground hover:bg-[#1E1F35] rounded-xl border border-border transition-colors shadow-sm"
+            title="Download transformed project"
+            aria-label="Download ZIP archive"
+          >
+            <Download className="w-3.5 h-3.5" />
+          </a>
+        )}
+        <ArrowRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-all" />
+      </div>
+    </motion.div>
+  );
+});
+
+const RecentJobsCard = memo(function RecentJobsCard() {
+  const dispatch = useAppDispatch();
+  const selectedJobId = useAppSelector((state: RootState) => state.workspace.selectedJobId);
+  const { jobs, isLoading } = useRecentJobs();
+  const isReduced = useReducedMotion();
+
+  const shortcutCtx = useContext(ShortcutContext);
+  const pushContext = shortcutCtx?.pushContext || (() => {});
+  const popContext = shortcutCtx?.popContext || (() => {});
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     const active = document.activeElement as HTMLElement;
@@ -126,68 +199,15 @@ const RecentJobsCard = memo(function RecentJobsCard() {
             className="divide-y divide-border space-y-2"
           >
             <AnimatePresence mode="popLayout">
-              {jobs.map((job: JobRecord) => {
-                const isSelected = selectedJobId === job.id;
-                return (
-                  <motion.div
-                    layout={isReduced ? "position" : true}
-                    key={job.id}
-                    variants={slideUp}
-                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                    transition={springTransition}
-                    whileHover={isReduced ? {} : { scale: 1.015, y: -1, zIndex: 10 }}
-                    whileTap={isReduced ? {} : { scale: 0.985 }}
-                    onClick={() => dispatch(setSelectedJobId(job.id))}
-                    tabIndex={0}
-                    role="listitem"
-                    aria-selected={isSelected}
-                    data-job-id={job.id}
-                    data-download-url={getDownloadUrl(job.id)}
-                    className={`job-list-item py-3 px-2.5 flex justify-between items-center group transition-all duration-200 rounded-xl cursor-pointer border focus:outline-none focus:ring-2 focus:ring-primary ${
-                      isSelected
-                        ? 'bg-primary/5 border-primary/45 shadow-glow'
-                        : 'bg-card/25 border-border hover:bg-accent/40'
-                    }`}
-                  >
-                    {/* Left side details */}
-                    <div className="flex items-center gap-3 w-3/5">
-                      {getIconForStatus(job.status)}
-                      <div className="min-w-0 flex-1">
-                        <span className="font-mono text-xs text-foreground font-bold block truncate" title={job.id}>
-                          {job.id}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground font-mono mt-1 flex items-center gap-1.5">
-                          <span>target: <strong className="text-foreground font-bold">{job.result?.targetFramework || 'N/A'}</strong></span>
-                          {job.result?.metadata?.fileCount !== undefined && (
-                            <>
-                              <span>•</span>
-                              <span>{job.result.metadata.fileCount} files</span>
-                            </>
-                          )}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Right side status and download */}
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Badge status={job.status} />
-                      
-                      {job.status === 'completed' && (
-                        <a
-                          href={getDownloadUrl(job.id)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="p-2 bg-[#12131F] text-muted-foreground hover:text-foreground hover:bg-[#1E1F35] rounded-xl border border-border transition-colors shadow-sm"
-                          title="Download transformed project"
-                          aria-label="Download ZIP archive"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                        </a>
-                      )}
-                      <ArrowRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-all" />
-                    </div>
-                  </motion.div>
-                );
-              })}
+              {jobs.map((job: JobRecord) => (
+                <JobListItem
+                  key={job.id}
+                  job={job}
+                  isSelected={selectedJobId === job.id}
+                  onClick={() => dispatch(setSelectedJobId(job.id))}
+                  isReduced={isReduced}
+                />
+              ))}
             </AnimatePresence>
           </motion.div>
         </div>

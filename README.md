@@ -1,106 +1,97 @@
-# 🎨 Code Migration Tool - Frontend Interface
+# Module 26: Frontend Architecture & SPA Layout
 
-Welcome to the frontend workspace of the **Multi-Framework Code Migration Studio**. This interface provides an enterprise-ready dashboard to upload legacy code projects, choose target translation frameworks, explore symbols dependency architectures, and audit AI self-healing patch logs.
+## 1. Executive Summary
+
+This document specifies the client-side SPA (Single Page Application) software architecture, state managers, API query layers, caching strategies, and routing controls of the **Frontend Studio Portal** for the **AI Code Migration Studio** platform. The application is built with React, Vite, TypeScript, Tailwind CSS, and shadcn/ui components. It uses **Zustand** for local state management and **TanStack Query** for caching server requests.
 
 ---
 
+## 2. Directory Structure & Layout
 
-## 🏛️ Architecture Overview
+The frontend codebase is organized by feature area to keep files modular and maintainable:
 
-The frontend follows a **Feature-First Architecture** designed to keep components decoupled, self-contained, and highly maintainable. Business domains are grouped under self-contained directories inside `src/features`, while reusable visual assets, styling rules, and state managers sit in the `src/shared`, `src/app`, and `src/store` hubs.
-
-```
-src/
-├── app/                  # Application bootstrap & provider wrapping configurations
-├── features/             # Self-contained domain specific logic, APIs, and views
-│   ├── upload/           # Zip files drag-and-drop parser
-│   ├── migration/        # Codemod mappings and AST settings configs
-│   ├── jobs/             # Recents job list, log sidebar, and download API links
-│   ├── reports/          # Self-healing corrections logs, code explorer, and file diffs
-│   └── dependency-graph/ # ReactFlow symbol relationships chart
-├── shared/               # Globally reusable layout panels, utility helpers, and common widgets
-│   ├── components/       # Buttons, Cards, Badges, Progress bars, Skeletons, Sidebars
-│   ├── types/            # Shared interfaces (api.types.ts)
-│   └── hooks/            # Shared client hooks (useDebounce, useLocalStorage)
-├── store/                # Client state configuration (Redux Toolkit)
-└── services/             # Core connection utilities
-    └── http/             # Axios-based httpClient with timeout, header rules, and interceptors
+```markdown
+packages/frontend/src/
+├── animations/         # Framer Motion transitions and styles
+├── app/                # React App entry points & global providers
+├── components/         # Shared UI elements (buttons, inputs, cards)
+├── features/           # Feature modules: auth, dashboard, compiler
+├── hooks/              # Reusable React hooks
+├── lib/                # Client configurations (axios, react-flow settings)
+├── services/           # Axios API connectors
+├── shared/             # Global TypeScript interface definitions
+├── store/              # Zustand global store files
+└── utils/              # Helper utilities
 ```
 
 ---
 
-## 🧠 State Management Strategy
+## 3. Frontend Architecture Flowchart
 
-We maintain a strict boundary between **Server State** and **Client/Global State**:
+The frontend coordinates user events, global state updates, and server requests through a structured flow:
 
 ```mermaid
-graph TD
-    A[State Managers] --> B[Server State: TanStack Query]
-    A --> C[Client State: Redux Toolkit]
-    B --> B1[Recent Jobs Polling]
-    B --> B2[AST Log Summaries]
-    B --> B3[ReactFlow Node Lists]
-    C --> C1[Active Nav Tab]
-    C --> C2[Active selectedJobId]
-    C --> C3[Graph Search & Filters]
+flowchart TD
+    UserEvent[User clicks Migrate Component] --> UI[React Feature Component]
+    UI -->|Trigger Mutation| Query[TanStack Query Mutation Hook]
+    
+    Query -->|POST API request| Axios[Axios Instance: API Client]
+    Axios -->|Network JSON exchange| Server[Express Backend Server]
+    
+    Server -->|HTTP Response JSON| Axios
+    Axios -->|Resolve Promise| Query
+    
+    Query -->|Invalidate query cache| Cache[TanStack Query Cache Manager]
+    Cache -->|Triggers reload| UI
+    Query -->|Update state| Zustand[Zustand Global Store: Workspace Details]
 ```
-
-### 1. Server State (TanStack Query)
-TanStack Query manages all data cached or fetched from the backend API.
-* **Retries & Caching**: Configured with a default `staleTime` of 10s and a retry rate of 1 to keep connection drops from crashing the client.
-* **Keys**: Uses structured, array-based query keys for automatic refetch triggers (e.g., `['graph', jobId, page, search, filter]`).
-* **Conventions**: No components perform direct fetch/axios queries. All actions are handled via custom queries and mutation hooks:
-  * `useRecentJobs()`: Polls job lists every 5 seconds.
-  * `useJob(jobId)`: Polls active progress status every 2 seconds during processing.
-  * `useUpload()`: Trigger mutation to upload files and invalidates `recentJobs` queries upon starting.
-  * `useDependencyGraph(...)`: Tracks paginated symbol nodes.
-  * `useMigrationReport(jobId)`: Loads logs only after a job completes.
-
-### 2. Client/Global State (Redux Toolkit)
-Redux manages ephemeral client-side UI states that do not require server storage.
-* **Conventions**: Redux store slices are defined under `src/store/slices/`.
-* **Hooks**: Components import typed selectors and dispatcher hooks (`useAppSelector` and `useAppDispatch`).
-* **Active Slices**:
-  * `uiSlice`: Manages active navigation tabs (`activeTab`).
-  * `workspaceSlice`: Manages the selected active job UUID (`selectedJobId`).
-  * `graphSlice`: Tracks dependency graph states (`search`, `filter`, `page`, `selectedNode`).
 
 ---
 
-## 💻 Coding Standards & Best Practices
+## 4. State Management Store Segments
 
-1. **Component Scopes**: Limit component files to **150–250 lines**. Over-sized views are broken down into granular widgets.
-2. **Strict Memoization**:
-   * All heavy components use `React.memo()` to prevent cascading re-renders during background polling.
-   * Event handlers and array mappings inside render loops are wrapped in `useCallback()` and `useMemo()` with stable reference keys.
-3. **No Unused Imports**: Strictly adhere to `noUnusedLocals` and `noUnusedParameters` rules.
-4. **TypeScript Safety**: Avoid `any` castings or implicit `any` signatures. Declare explicit parameter type mappings to keep strict check parameters green.
+The frontend divides global store files into distinct slices using Zustand to prevent unnecessary component re-renders:
+
+| Store Slice | Primary Responsibility | Key States Tracked |
+| :--- | :--- | :--- |
+| **`useAuthStore`** | User login sessions, tokens. | `accessToken`, `currentUser`, `isAuthenticated` |
+| **`useWorkspaceStore`**| Active workspace data, members. | `currentWorkspace`, `membersList`, `roles` |
+| **`useJobStore`** | Migration jobs queues, logs. | `activeJobs`, `jobHistory`, `compilationProgress` |
+| **`useGraphStore`** | Dependency graphs, coordinates. | `nodes`, `edges`, `circularDependencies` |
 
 ---
 
-## ⚡ Development Workflow
+## 5. Sequence Diagram: Workspace State Hydration
+This sequence diagram shows how the frontend loads user credentials and workspace data during application boot.
 
-### Installation
-Populate local dependencies using the package manager:
-```bash
-npm install
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Developer
+    participant App as React App Entry
+    participant Store as useAuthStore
+    participant Query as TanStack Query Client
+    participant API as Express Gateway
+    
+    User->>App: Opens page http://localhost:5173
+    App->>Store: Invoke hydrateSession() (reads localStorage)
+    alt Session Valid
+        Store-->>App: Access token found
+        App->>Query: Hydrate QueryCache data
+        App->>API: GET /api/user/profile
+        API-->>App: Returns User Profile record
+        App->>API: GET /api/workspace
+        API-->>App: Returns last accessed workspace details
+    else Session Invalid / Expired
+        Store-->>App: Redirect user to /login
+    end
 ```
 
-### Run Dev Server
-Launch Vite's hot-reload server:
-```bash
-npm run dev
-```
-*(Runs on http://localhost:3000, proxies `/api` to backend service)*
+---
 
-### Cleanup Deprecated Structures
-Remove older component-centric directories:
-```bash
-npm run clean
-```
+## 6. Best Practices
 
-### Production Build
-Lint and build static production assets:
-```bash
-npm run build
-```
+- **Use Query Keys Consistently**: Use structured array query keys (e.g., `['workspaces', workspaceId, 'projects']`) in TanStack Query to keep caching and invalidations predictable.
+- **Implement Axios Interceptors**: Add request and response interceptors to Axios to automatically attach JWT access tokens and trigger token refreshes on `401 Unauthorized` responses.
+- **Enforce Strict Type Safety**: Ensure all API responses are fully typed with TypeScript interfaces rather than falling back to `any`.
+- **Set Long Stale Times**: Set long `staleTime` values (e.g., `5 minutes`) in TanStack Query for static reference data (like framework versions) to reduce unnecessary API requests.
