@@ -62,6 +62,7 @@ export interface GraphSummary {
   unusedCount: number;
   avgConnections: number;
   maxDepth: number;
+  architectureScore: number;
 }
 
 export interface ContextMenuState {

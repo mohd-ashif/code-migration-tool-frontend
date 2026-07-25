@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Globe, BookOpen, ExternalLink, X, ArrowRight, Lock, Check, Cpu, Layers } from 'lucide-react';
+import { Globe, BookOpen, ExternalLink, X, ArrowRight, Lock, Terminal, RefreshCw } from 'lucide-react';
 import Badge from '../../../shared/components/Badge';
 import { useFrameworkDetail } from '../../../hooks/useFrameworks';
 import { useUpdateEngine } from '../../../hooks/useMigrationEngines';
 import { useUpdateCodemod, useUpdateCompilerSettings } from '../../../hooks/useCodemods';
 import { toast } from '../../../services/toast/toast.service';
 import { getFrameworkIcon } from './FrameworkCard';
+import apiClient from '../../../services/http/apiClient';
 
 interface FrameworkDetailPanelProps {
   frameworkId: string;
@@ -19,8 +20,32 @@ export default function FrameworkDetailPanel({
   onClose,
   isAdmin,
 }: FrameworkDetailPanelProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'engines' | 'codemods' | 'settings' | 'matrix'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'engines' | 'codemods' | 'settings' | 'matrix' | 'logs'>('overview');
   const { data: detail, isLoading } = useFrameworkDetail(frameworkId);
+
+  // Engine Logs state
+  const [engineLogs, setEngineLogs] = useState<any[]>([]);
+  const [isLogsLoading, setIsLogsLoading] = useState(false);
+
+  const fetchLogs = async () => {
+    setIsLogsLoading(true);
+    try {
+      const res: any = await apiClient.get('/api/engines/logs');
+      if (res.success && res.data) {
+        setEngineLogs(res.data);
+      }
+    } catch {
+      // ignore error
+    } finally {
+      setIsLogsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'logs') {
+      fetchLogs();
+    }
+  }, [activeTab]);
 
   // Mutations
   const updateEngineMutation = useUpdateEngine();
@@ -109,6 +134,7 @@ export default function FrameworkDetailPanel({
     { id: 'codemods', name: 'Codemods' },
     { id: 'settings', name: 'Compiler Settings' },
     { id: 'matrix', name: 'Migrations Matrix' },
+    { id: 'logs', name: 'Engine Logs' },
   ];
 
   if (isLoading) {
@@ -560,6 +586,49 @@ export default function FrameworkDetailPanel({
                       <div className="p-8 text-center text-gray-500 text-xs font-mono">No direct source/target paths linked.</div>
                     )}
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* ENGINE LOGS PANEL */}
+            {activeTab === 'logs' && (
+              <div className="space-y-4 animate-fadeIn">
+                <div className="flex items-center justify-between border-b border-[#1E1F35] pb-3">
+                  <div className="flex items-center gap-2">
+                    <Terminal className="w-4 h-4 text-primary" />
+                    <h4 className="text-xs font-bold text-gray-300 font-mono uppercase tracking-wider">Compiler Engine Execution & Audit Logs</h4>
+                  </div>
+                  <button
+                    onClick={fetchLogs}
+                    disabled={isLogsLoading}
+                    className="flex items-center gap-1.5 px-3 py-1 bg-[#1A1C36] hover:bg-[#25284D] border border-[#2D305C] rounded-lg text-xs font-mono text-gray-300 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${isLogsLoading ? 'animate-spin' : ''}`} /> Refresh Logs
+                  </button>
+                </div>
+
+                <div className="bg-[#05050C] border border-[#1E1F35] rounded-xl p-4 font-mono text-xs space-y-2 h-96 overflow-y-auto">
+                  {engineLogs.length > 0 ? (
+                    engineLogs.map((log: any, idx: number) => (
+                      <div key={idx} className="flex items-start gap-3 p-2 hover:bg-[#121324]/60 rounded border border-transparent hover:border-[#1E1F35]/40 transition-colors">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          log.level === 'ERROR' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
+                          log.level === 'WARN' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                          'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                        }`}>
+                          {log.level || 'INFO'}
+                        </span>
+                        <span className="text-gray-500 text-[10px] shrink-0 font-mono mt-0.5">
+                          {new Date(log.timestamp).toLocaleTimeString()}
+                        </span>
+                        <span className="text-gray-200 text-xs font-mono break-all leading-relaxed">
+                          {log.message}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-16 text-gray-600 italic">No compiler logs available for this engine.</div>
+                  )}
                 </div>
               </div>
             )}

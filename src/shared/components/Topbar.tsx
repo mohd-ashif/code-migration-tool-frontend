@@ -6,14 +6,28 @@ import { logout } from '../../store/slices/authSlice';
 import { setActiveTab, setSettingsSubTab } from '../../store/slices/uiSlice';
 import apiClient from '../../services/http/apiClient';
 import { RootState } from '../../store';
+import { useSubscription } from '../../hooks/useBilling';
 
 export default function Topbar() {
   const dispatch = useAppDispatch();
   const user = useAppSelector((state: RootState) => state.auth.user);
+  const workspaceId = useAppSelector((state: RootState) => state.workspace.currentWorkspaceId);
   const workspaceName = useAppSelector((state: RootState) => state.workspace.currentWorkspaceName);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const shortcutCtx = useContext(ShortcutContext);
   const setIsHelpOpen = shortcutCtx?.setIsHelpOpen || (() => {});
+
+  const { data: subscription } = useSubscription(workspaceId || undefined);
+
+  const planName = subscription?.plan?.name || subscription?.planName || subscription?.plan_name || subscription?.plan?.slug || 'Free';
+  const isPro = planName.toLowerCase().includes('pro');
+  const isEnterprise = planName.toLowerCase().includes('enterprise');
+
+  const planBadgeStyle = isEnterprise
+    ? 'text-purple-300 border-purple-500/40 bg-purple-500/15'
+    : isPro
+    ? 'text-[#9E8BFF] border-[#7C6CFF]/40 bg-[#7C6CFF]/15'
+    : 'text-zinc-400 border-zinc-700/50 bg-zinc-800/50';
 
   const handleLogoutClick = async () => {
     try {
@@ -48,7 +62,9 @@ export default function Topbar() {
           <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/5 border border-primary/15 rounded-xl">
             <Building2 className="w-3.5 h-3.5 text-primary/70" />
             <span className="text-[11px] font-semibold text-primary/90 max-w-[160px] truncate">{workspaceName}</span>
-            <span className="text-[10px] text-zinc-500 font-mono border border-zinc-700/50 rounded px-1">Free</span>
+            <span className={`text-[10px] font-mono border rounded px-1.5 py-0.5 font-bold capitalize transition-all ${planBadgeStyle}`}>
+              {planName}
+            </span>
           </div>
         )}
       </div>

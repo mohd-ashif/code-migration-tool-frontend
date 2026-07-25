@@ -4,6 +4,7 @@ import uiReducer from './slices/uiSlice';
 import workspaceReducer from './slices/workspaceSlice';
 import graphReducer from './slices/graphSlice';
 import authReducer from './slices/authSlice';
+import billingUIReducer from './slices/billingSlice';
 
 export const store = configureStore({
   reducer: {
@@ -11,6 +12,7 @@ export const store = configureStore({
     workspace: workspaceReducer,
     graph: graphReducer,
     auth: authReducer,
+    billingUI: billingUIReducer,
   },
 });
 

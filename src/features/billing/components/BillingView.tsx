@@ -20,7 +20,9 @@ import PricingGrid from './PricingGrid';
 import BillingAddressForm from './BillingAddressForm';
 import PromoCouponSection from './PromoCouponSection';
 import InvoicesList from './InvoicesList';
+import PaymentHistoryTable from './PaymentHistoryTable';
 import SimulatedPaymentModal from './SimulatedPaymentModal';
+import EnterpriseInvoicePreview from './EnterpriseInvoicePreview';
 
 export default function BillingView() {
   const workspaceId = useAppSelector((state) => state.workspace.currentWorkspaceId);
@@ -63,6 +65,7 @@ export default function BillingView() {
   const [checkoutError, setCheckoutError] = useState('');
   const [loadingRazorpay, setLoadingRazorpay] = useState(false);
   const [activeCheckoutPlan, setActiveCheckoutPlan] = useState<string | null>(null);
+  const [selectedPreviewInvoice, setSelectedPreviewInvoice] = useState<any | null>(null);
 
   // Sync address form with existing sub address if available
   useEffect(() => {
@@ -473,7 +476,20 @@ export default function BillingView() {
       </div>
 
       {/* Invoices List */}
-      <InvoicesList invoices={invoices || []} />
+      <InvoicesList
+        invoices={invoices || []}
+        onSelectInvoice={(inv) => setSelectedPreviewInvoice(inv)}
+      />
+
+      {/* Payment History Table */}
+      <PaymentHistoryTable />
+
+      {/* Enterprise Invoice Preview Modal */}
+      <EnterpriseInvoicePreview
+        isOpen={Boolean(selectedPreviewInvoice)}
+        invoice={selectedPreviewInvoice}
+        onClose={() => setSelectedPreviewInvoice(null)}
+      />
 
       {/* Sandbox Simulator Modal */}
       <SimulatedPaymentModal
