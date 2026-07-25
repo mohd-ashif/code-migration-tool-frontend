@@ -57,7 +57,7 @@ import ShortcutDialog from '../shortcuts/components/keyboard/ShortcutDialog';
 import ShortcutContext from '../shortcuts/shortcutContext';
 import { useGlobalShortcut } from '../shortcuts/hooks/useGlobalShortcut';
 
-import { initPerformanceMonitor } from '../utils/performanceMonitor';
+import { initPerformanceMonitoring } from '../utils/performanceMonitor';
 import { logger } from '../utils/logger';
 
 // ── Lazy fallback skeleton ────────────────────────────────────────────────────
@@ -127,6 +127,8 @@ function AppContent() {
 
   // Startup: parse URL tokens + silent session refresh
   useEffect(() => {
+    initPerformanceMonitoring();
+
     const params = new URLSearchParams(window.location.search);
     const token  = params.get('token');
     const mode   = params.get('mode');
@@ -462,7 +464,7 @@ function AppContent() {
 export default function App() {
   // Initialise performance monitoring once at root, outside React render tree
   useEffect(() => {
-    initPerformanceMonitor();
+    initPerformanceMonitoring();
     logger.info('[App] Migration Studio initialised.');
   }, []);
 

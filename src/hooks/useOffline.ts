@@ -1,46 +1,35 @@
-// ── useOffline ─────────────────────────────────────────────────────────────────
-// Subscribes to window online/offline events and syncs the status into Redux so
-// any component can read `state.ui.isOffline`. Also shows informational toasts
-// on transition.
-
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useAppDispatch } from '../store';
 import { setOfflineStatus } from '../store/slices/uiSlice';
 import { toast } from '../services/toast/toast.service';
 import { logger } from '../utils/logger';
 
-export function useOffline(): void {
+export function useOffline() {
   const dispatch = useAppDispatch();
-  // Avoid toasting on the initial mount (the page is presumably online already)
-  const mounted = useRef(false);
 
   useEffect(() => {
     const handleOnline = () => {
       dispatch(setOfflineStatus(false));
-      logger.info('[Network] Connection restored — online mode active.');
-      if (mounted.current) {
-        toast.success('Connection restored. Back online!');
-      }
+      toast.success('Connection restored. Online mode enabled.');
+      logger.info('Network status changed: ONLINE');
     };
 
     const handleOffline = () => {
       dispatch(setOfflineStatus(true));
-      logger.warn('[Network] Connection lost — offline mode active.');
-      if (mounted.current) {
-        toast.error('Connection lost. You are offline.');
-      }
+      toast.error('Connection lost. Offline mode activated.');
+      logger.warn('Network status changed: OFFLINE');
     };
 
-    // Sync initial state in case we mount already offline
-    dispatch(setOfflineStatus(!navigator.onLine));
+    // Set initial status
+    if (typeof navigator !== 'undefined') {
+      dispatch(setOfflineStatus(!navigator.onLine));
+    }
 
-    window.addEventListener('online',  handleOnline);
+    window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    mounted.current = true;
-
     return () => {
-      window.removeEventListener('online',  handleOnline);
+      window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, [dispatch]);

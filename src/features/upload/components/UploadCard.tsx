@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, FileCode, CheckCircle, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Upload, FileCode, CheckCircle, AlertCircle, ArrowLeft, Folder } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUpload } from '../hooks/useUpload';
 import { API_KEY } from '../../../services/http/apiClient';
@@ -10,9 +10,11 @@ import { setSelectedJobId } from '../../../store/slices/workspaceSlice';
 import { ParsedFile } from '../../../shared/types/api.types';
 import { defaultTransition, slideHorizontal } from '../../../animations/variants';
 import { useReducedMotion } from '../../../hooks/useReducedMotion';
+import { parseDroppedItems } from '../../../utils/folderParser';
+import { ChunkedUploader, UploadProgress } from '../../../utils/chunkedUploader';
+import LiveMigrationTracker from '../../migration/components/LiveMigrationTracker';
 
 interface UploadCardProps {
-  /** When true (e.g. network offline), all upload/migration actions are disabled */
   disabled?: boolean;
 }
 
@@ -24,7 +26,13 @@ const UploadCard = React.memo(function UploadCard({ disabled = false }: UploadCa
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [step, setStep] = useState<'upload' | 'configure'>('upload');
+  const [step, setStep] = useState<'upload' | 'configure' | 'active_job'>('upload');
+
+  // Chunked Upload & Folder Parsing States
+  const [isFolder, setIsFolder] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
+  const uploaderRef = useRef<ChunkedUploader | null>(null);
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
 
   // Configuration states
   const [detectedFramework, setDetectedFramework] = useState<string>('');
@@ -33,10 +41,6 @@ const UploadCard = React.memo(function UploadCard({ disabled = false }: UploadCa
   const [sourceFramework, setSourceFramework] = useState<string>('');
 
   const inputRef = useRef<HTMLInputElement>(null);
-
-
-
-
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -48,17 +52,46 @@ const UploadCard = React.memo(function UploadCard({ disabled = false }: UploadCa
     }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
+    setError(null);
+
+    // 1. Check for Directory Drop via HTML5 webkitGetAsEntry
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      const items = e.dataTransfer.items;
+      const isDir = items[0].webkitGetAsEntry?.()?.isDirectory;
+
+      if (isDir) {
+        setIsFolder(true);
+        try {
+          const folderFiles = await parseDroppedItems(items);
+          if (folderFiles.length === 0) {
+            setError("No valid source files found in dropped folder.");
+            return;
+          }
+          setParsedFiles(folderFiles);
+          setDetectedFramework('javascript');
+          setSourceFramework('javascript');
+          setStep('configure');
+          return;
+        } catch (err: any) {
+          setError("Failed to parse dropped directory structure.");
+          return;
+        }
+      }
+    }
+
+    // 2. Regular File / ZIP Drop
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const droppedFile = e.dataTransfer.files[0];
       if (droppedFile.name.endsWith('.zip')) {
         setFile(droppedFile);
+        setIsFolder(false);
         setError(null);
       } else {
-        setError("Only ZIP files are supported.");
+        setError("Only ZIP files or Project Folders are supported.");
       }
     }
   };
@@ -67,13 +100,20 @@ const UploadCard = React.memo(function UploadCard({ disabled = false }: UploadCa
     e.preventDefault();
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
+      setIsFolder(false);
       setError(null);
     }
   };
 
   const handleParse = async () => {
+    if (parsedFiles.length > 0 && isFolder) {
+      setStep('configure');
+      return;
+    }
+
     if (!file) return;
     setError(null);
+
     try {
       const res = await parseProject(file);
       if (res.success && res.data) {
@@ -82,16 +122,10 @@ const UploadCard = React.memo(function UploadCard({ disabled = false }: UploadCa
         setSourceFramework(fw);
         setParsedFiles(res.data.files);
 
-        // Suggest a valid target framework
-        if (fw === 'react') {
-          setTargetFramework('typescript');
-        } else if (fw === 'angular' || fw === 'vue') {
-          setTargetFramework('react');
-        } else if (fw === 'javascript') {
-          setTargetFramework('typescript');
-        } else {
-          setTargetFramework('react');
-        }
+        if (fw === 'react') setTargetFramework('typescript');
+        else if (fw === 'angular' || fw === 'vue') setTargetFramework('react');
+        else if (fw === 'javascript') setTargetFramework('typescript');
+        else setTargetFramework('react');
 
         setStep('configure');
       } else {
@@ -104,6 +138,30 @@ const UploadCard = React.memo(function UploadCard({ disabled = false }: UploadCa
 
   const handleMigrate = async () => {
     setError(null);
+
+    // Large File Chunked Upload Strategy (Files > 10MB)
+    if (file && file.size > 10 * 1024 * 1024) {
+      const uploader = new ChunkedUploader(file, targetFramework, sourceFramework);
+      uploaderRef.current = uploader;
+
+      uploader
+        .onProgress((prog) => {
+          setUploadProgress(prog);
+        })
+        .onComplete(({ jobId }) => {
+          setActiveJobId(jobId);
+          dispatch(setSelectedJobId(jobId));
+          setStep('active_job');
+        })
+        .onError((errMessage) => {
+          setError(errMessage);
+        });
+
+      uploader.startUpload();
+      return;
+    }
+
+    // Standard In-Memory Migration Strategy
     try {
       const res = await startMigration({
         projectFiles: parsedFiles,
@@ -111,10 +169,9 @@ const UploadCard = React.memo(function UploadCard({ disabled = false }: UploadCa
         sourceFramework,
       });
       if (res.success && res.jobId) {
+        setActiveJobId(res.jobId);
         dispatch(setSelectedJobId(res.jobId));
-        // Reset state
-        setFile(null);
-        setStep('upload');
+        setStep('active_job');
       } else {
         setError((res as any).message || "Failed to start migration job.");
       }
@@ -131,17 +188,39 @@ const UploadCard = React.memo(function UploadCard({ disabled = false }: UploadCa
     { label: 'nuxt', value: 'nuxt' },
   ];
 
-  const loading = isParsing || isMigrating;
+  const loading = isParsing || isMigrating || uploadProgress?.status === 'uploading';
   const isBlocked = disabled || loading;
 
   return (
     <Card 
       id="upload-card-root"
       tabIndex={0}
-      className="flex flex-col flex-1 h-[460px] relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+      className="flex flex-col flex-1 min-h-[460px] relative overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
     >
       <AnimatePresence mode="wait" initial={false}>
-        {step === 'upload' ? (
+        {step === 'active_job' && activeJobId ? (
+          <motion.div
+            key="active-job-step"
+            variants={slideHorizontal}
+            custom={1}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="flex flex-col flex-1 justify-between h-full"
+          >
+            <LiveMigrationTracker
+              jobId={activeJobId}
+              onCancel={() => {
+                setStep('upload');
+                setActiveJobId(null);
+                setFile(null);
+              }}
+              onComplete={() => {
+                // Keep completed view accessible
+              }}
+            />
+          </motion.div>
+        ) : step === 'upload' ? (
           <motion.div
             key="upload-step"
             variants={slideHorizontal}
@@ -157,7 +236,7 @@ const UploadCard = React.memo(function UploadCard({ disabled = false }: UploadCa
                 <h2 className="text-sm font-bold text-foreground uppercase tracking-wider">Upload Project</h2>
               </div>
               <p className="text-xs text-muted-foreground mb-6 leading-relaxed select-none">
-                Drop a ZIP of your frontend project, or grab a{' '}
+                Drop a ZIP archive or entire project folder, or grab a{' '}
                 <a
                   href={`/api/sample?apiKey=${API_KEY}`}
                   download
@@ -209,62 +288,41 @@ const UploadCard = React.memo(function UploadCard({ disabled = false }: UploadCa
                   animate={dragActive && !isReduced ? { y: [0, -8, 0], transition: { repeat: Infinity, duration: 0.8 } } : {}}
                   className="p-3 bg-primary/10 text-primary border border-primary/20 rounded-xl mb-3 group-hover:scale-105 transition-transform duration-300 shadow-glow"
                 >
-                  <FileCode className="w-6 h-6" />
+                  {isFolder ? <Folder className="w-6 h-6" /> : <FileCode className="w-6 h-6" />}
                 </motion.div>
                 
                 <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-                  {file ? file.name : "Drag & drop your project ZIP"}
+                  {file ? file.name : parsedFiles.length > 0 ? `Folder parsed (${parsedFiles.length} files)` : "Drag & drop project ZIP or Folder"}
                 </p>
                 <p className="text-[10px] text-muted-foreground mt-1.5 font-mono">
-                  {file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : "or click to browse • max 200MB"}
+                  {file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : "supports large ZIPs up to 500MB+ & folder drag-and-drop"}
                 </p>
               </motion.div>
 
-              {/* Framework Chips shortcuts */}
-              <div className="mt-6 flex flex-wrap gap-2 select-none">
-                {chips.map((c) => {
-                  const isSelected = targetFramework === c.value;
-                  return (
-                    <motion.button
-                      whileTap={isReduced ? {} : { scale: 0.95 }}
-                      key={c.label}
-                      onClick={() => setTargetFramework(c.value)}
-                      className={`px-3 py-1.5 text-[11px] font-semibold font-mono rounded-lg border transition-colors ${
-                        isSelected
-                          ? 'bg-primary/20 border-primary text-white shadow-glow'
-                          : 'border-border bg-card/40 text-muted-foreground hover:text-foreground hover:border-gray-500'
-                      }`}
-                    >
-                      {isSelected ? '• ' : '+ '}
-                      {c.label}
-                    </motion.button>
-                  );
-                })}
-              </div>
-
+              {/* Error Message */}
               {error && (
-                <div className="mt-4 p-3 bg-destructive/10 text-destructive text-xs rounded-xl flex items-center gap-2 border border-destructive/20 animate-shake">
+                <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-xl flex items-center gap-2 text-xs text-destructive">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{error}</span>
                 </div>
               )}
             </div>
 
-            {disabled && (
-              <p className="text-[10px] text-red-400 font-semibold text-center mt-2">
-                ⚠ Offline — upload unavailable
-              </p>
-            )}
-            <Button
-              onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); if (!disabled) handleParse(); }}
-              disabled={!file || isBlocked}
-              loading={isParsing}
-              className="w-full mt-6"
-            >
-              Upload and Analyze Project
-            </Button>
+            {/* Parse / Next Button */}
+            <div className="mt-6 pt-4 border-t border-border/40">
+              <Button
+                variant="primary"
+                onClick={handleParse}
+                disabled={isBlocked || (!file && parsedFiles.length === 0)}
+                loading={isParsing}
+                className="w-full justify-center shadow-glow"
+              >
+                {isParsing ? "Analyzing Codebase AST..." : "Inspect & Configure Migration →"}
+              </Button>
+            </div>
           </motion.div>
         ) : (
+          /* Configure Step */
           <motion.div
             key="configure-step"
             variants={slideHorizontal}
@@ -272,93 +330,91 @@ const UploadCard = React.memo(function UploadCard({ disabled = false }: UploadCa
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="flex flex-col flex-1 justify-between h-full select-none"
+            className="flex flex-col flex-1 justify-between h-full"
           >
             <div>
-              <div className="flex items-center gap-2 mb-1.5">
-                <CheckCircle className="w-4 h-4 text-success" />
-                <h2 className="text-sm font-bold text-foreground uppercase tracking-wider">Project Analyzed</h2>
-              </div>
-              <p className="text-xs text-muted-foreground mb-6">Configure the migration parameters below.</p>
+              <button
+                onClick={() => setStep('upload')}
+                disabled={isBlocked}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-4 transition-colors font-medium cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" /> Back to Upload
+              </button>
 
-              <div className="space-y-4">
-                <div className="p-3.5 bg-success/5 border border-success/15 rounded-xl text-xs flex justify-between items-center font-mono">
-                  <span className="text-muted-foreground font-medium">Auto-detected Framework:</span>
-                  <span className="text-success font-bold capitalize bg-success/10 px-2 py-0.5 rounded-lg border border-success/20">
-                    {detectedFramework || "Vanilla JS"}
-                  </span>
+              <h2 className="text-sm font-bold text-foreground uppercase tracking-wider mb-1">Target Architecture</h2>
+              <p className="text-xs text-muted-foreground mb-4 select-none">
+                Select your desired target framework to transform codebase codemods.
+              </p>
+
+              {/* Source info */}
+              <div className="mb-4 p-3 bg-secondary/30 border border-border/60 rounded-xl flex items-center justify-between select-none">
+                <div>
+                  <span className="text-[10px] text-muted-foreground uppercase font-mono block">Detected Source</span>
+                  <span className="text-xs font-bold text-foreground capitalize">{sourceFramework || detectedFramework || 'Auto-Detect'}</span>
                 </div>
-
-                {/* Source selector override */}
-                <div className="space-y-1.5">
-                  <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider font-mono">
-                    Source Framework (Override)
-                  </label>
-                  <select
-                    value={sourceFramework}
-                    onChange={(e) => setSourceFramework(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#12131F] border border-[#1E1F35] text-white rounded-xl focus:outline-none focus:border-primary text-xs transition-all cursor-pointer font-medium"
-                  >
-                    <option value="angular" className="bg-[#12131F] text-white">Angular</option>
-                    <option value="vue" className="bg-[#12131F] text-white">Vue</option>
-                    <option value="react" className="bg-[#12131F] text-white">React</option>
-                    <option value="javascript" className="bg-[#12131F] text-white">JavaScript</option>
-                    <option value="typescript" className="bg-[#12131F] text-white">TypeScript</option>
-                    <option value="next" className="bg-[#12131F] text-white">Next.js</option>
-                    <option value="svelte" className="bg-[#12131F] text-white">Svelte</option>
-                    <option value="nuxt" className="bg-[#12131F] text-white">Nuxt.js</option>
-                  </select>
-                </div>
-
-                {/* Target framework selector */}
-                <div className="space-y-1.5">
-                  <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider font-mono">
-                    Target Framework
-                  </label>
-                  <select
-                    value={targetFramework}
-                    onChange={(e) => setTargetFramework(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#12131F] border border-[#1E1F35] text-white rounded-xl focus:outline-none focus:border-primary text-xs transition-all cursor-pointer font-medium"
-                  >
-                    <option value="react" className="bg-[#12131F] text-white">React (JSX)</option>
-                    <option value="typescript" className="bg-[#12131F] text-white">TypeScript (TSX)</option>
-                    <option value="next" className="bg-[#12131F] text-white">Next.js</option>
-                    <option value="vue" className="bg-[#12131F] text-white">Vue 3</option>
-                    <option value="svelte" className="bg-[#12131F] text-white">Svelte</option>
-                    <option value="nuxt" className="bg-[#12131F] text-white">Nuxt.js</option>
-                  </select>
-                </div>
-
-                <div className="pt-2 text-[10px] text-muted-foreground font-mono">
-                  Found <strong className="text-foreground">{parsedFiles.length}</strong> source files ready to transform.
+                <div className="flex items-center gap-1 text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                  <CheckCircle className="w-3 h-3" /> {parsedFiles.length} files parsed
                 </div>
               </div>
 
+              {/* Target chips */}
+              <div className="space-y-2 select-none">
+                <span className="text-[10px] text-muted-foreground uppercase font-mono block">Select Target Framework</span>
+                <div className="grid grid-cols-2 gap-2">
+                  {chips.map((chip) => (
+                    <button
+                      key={chip.value}
+                      type="button"
+                      disabled={isBlocked}
+                      onClick={() => setTargetFramework(chip.value)}
+                      className={`px-3 py-2 rounded-xl border text-xs font-bold text-left transition-all cursor-pointer ${
+                        targetFramework === chip.value
+                          ? 'bg-primary/10 border-primary text-primary shadow-glow'
+                          : 'bg-secondary/20 border-border/60 text-muted-foreground hover:border-border hover:text-foreground'
+                      }`}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Large Upload Progress Bar if Chunking */}
+              {uploadProgress && uploadProgress.status === 'uploading' && (
+                <div className="mt-4 p-3 bg-[#0B0B14] border border-zinc-800 rounded-xl space-y-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-semibold text-white font-mono">Uploading Chunks...</span>
+                    <span className="text-primary font-bold">{uploadProgress.progressPercent}% ({uploadProgress.formattedSpeed})</span>
+                  </div>
+                  <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden">
+                    <div className="h-full bg-primary transition-all duration-200" style={{ width: `${uploadProgress.progressPercent}%` }} />
+                  </div>
+                </div>
+              )}
+
+              {/* Error Message */}
               {error && (
-                <div className="mt-4 p-3 bg-destructive/10 text-destructive text-xs rounded-xl flex items-center gap-2 border border-destructive/20 animate-shake">
+                <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-xl flex items-center gap-2 text-xs text-destructive">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{error}</span>
                 </div>
               )}
             </div>
 
-            <div className="flex gap-3 mt-6">
+            {/* Execute Button */}
+            <div className="mt-6 pt-4 border-t border-border/40">
               <Button
-                variant="outline"
-                onClick={() => setStep('upload')}
-                disabled={loading}
-                icon={<ArrowLeft className="w-3.5 h-3.5" />}
-                className="flex-1"
-              >
-                Back
-              </Button>
-              <Button
+                variant="primary"
                 onClick={handleMigrate}
-                disabled={loading}
-                loading={isMigrating}
-                className="flex-1"
+                disabled={isBlocked}
+                loading={isMigrating || uploadProgress?.status === 'uploading'}
+                className="w-full justify-center shadow-glow"
               >
-                Run Migration
+                {uploadProgress?.status === 'uploading'
+                  ? `Uploading Chunks (${uploadProgress.progressPercent}%)...`
+                  : isMigrating
+                  ? "Initializing Live Engine..."
+                  : `Start Codebase Migration →`}
               </Button>
             </div>
           </motion.div>

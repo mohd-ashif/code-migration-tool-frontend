@@ -13,13 +13,13 @@ export function computeAnalytics(
   const componentCount = nodes.filter(n => n.data.type === 'component').length;
   const hookCount = nodes.filter(n => n.data.type === 'hook').length;
   const utilityCount = nodes.filter(n => n.data.type === 'utility' || n.data.type === 'function').length;
-  const serviceCount = nodes.filter(n => n.data.type === 'service').length;
+  const serviceCount = nodes.filter(n => n.data.type === 'service' || n.data.type === 'class').length;
 
   const avgConnections = totalNodes > 0
     ? Math.round((totalEdges / totalNodes) * 10) / 10
     : 0;
 
-  // BFS to find max depth from any root node (no incoming edges)
+  // BFS to find max depth from root nodes
   const incomingCount = new Map<string, number>();
   for (const e of edges) {
     incomingCount.set(e.target, (incomingCount.get(e.target) || 0) + 1);
@@ -44,6 +44,16 @@ export function computeAnalytics(
     }
   }
 
+  // Calculate Architecture Quality Score (0 - 100)
+  const baseScore = 100;
+  const circularPenalty = Math.min(circularCount * 10, 40);
+  const unusedRatio = totalNodes > 0 ? unusedCount / totalNodes : 0;
+  const unusedPenalty = Math.round(unusedRatio * 30);
+  const highlyCoupledCount = nodes.filter(n => (n.data.imports?.length || 0) + (n.data.usedBy || 0) > 8).length;
+  const couplingPenalty = Math.min(highlyCoupledCount * 5, 25);
+
+  const architectureScore = Math.max(0, Math.min(100, baseScore - circularPenalty - unusedPenalty - couplingPenalty));
+
   return {
     totalComponents: componentCount,
     totalHooks: hookCount,
@@ -55,5 +65,6 @@ export function computeAnalytics(
     unusedCount,
     avgConnections,
     maxDepth,
+    architectureScore,
   };
 }

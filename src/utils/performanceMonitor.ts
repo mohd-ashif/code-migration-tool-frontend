@@ -1,126 +1,52 @@
-// ── Performance Monitor ───────────────────────────────────────────────────────
-// Uses native PerformanceObserver to capture Web Vitals (FCP, LCP, CLS, INP)
-// without any additional bundle cost. Results are logged via the app logger.
-
 import { logger } from './logger';
 
-export interface VitalsReport {
-  FCP?: number;  // First Contentful Paint  (ms)
-  LCP?: number;  // Largest Contentful Paint (ms)
-  CLS?: number;  // Cumulative Layout Shift  (score)
-  INP?: number;  // Interaction to Next Paint (ms)
-  TTFB?: number; // Time to First Byte       (ms)
-}
-
-const report: VitalsReport = {};
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function round(n: number, decimals = 2): number {
-  return Math.round(n * 10 ** decimals) / 10 ** decimals;
-}
-
-function logVital(name: string, value: number) {
-  const formatted = name === 'CLS' ? round(value, 4) : Math.round(value);
-  const unit = name === 'CLS' ? '' : ' ms';
-  logger.info(`[Web Vital] ${name}: ${formatted}${unit}`, { metric: name, value });
-}
-
-// ── Observers ────────────────────────────────────────────────────────────────
-
-function observePaint() {
-  if (!('PerformanceObserver' in window)) return;
+export function initPerformanceMonitoring() {
+  if (typeof window === 'undefined' || !('PerformanceObserver' in window)) {
+    return;
+  }
 
   try {
-    const po = new PerformanceObserver((list) => {
-      for (const entry of list.getEntries()) {
+    // 1. Observe First Contentful Paint (FCP)
+    const fcpObserver = new PerformanceObserver((entryList) => {
+      for (const entry of entryList.getEntries()) {
         if (entry.name === 'first-contentful-paint') {
-          report.FCP = entry.startTime;
-          logVital('FCP', entry.startTime);
+          logger.info(`Web Vital: FCP = ${entry.startTime.toFixed(2)} ms`);
         }
       }
     });
-    po.observe({ type: 'paint', buffered: true });
-  } catch { /* browser may not support */ }
-}
+    fcpObserver.observe({ type: 'paint', buffered: true });
 
-function observeLCP() {
-  if (!('PerformanceObserver' in window)) return;
-
-  try {
-    const po = new PerformanceObserver((list) => {
-      const entries = list.getEntries();
-      const last = entries[entries.length - 1] as any;
-      if (last) {
-        report.LCP = last.startTime;
-        logVital('LCP', last.startTime);
+    // 2. Observe Largest Contentful Paint (LCP)
+    const lcpObserver = new PerformanceObserver((entryList) => {
+      const entries = entryList.getEntries();
+      const lastEntry = entries[entries.length - 1];
+      if (lastEntry) {
+        logger.info(`Web Vital: LCP = ${lastEntry.startTime.toFixed(2)} ms`);
       }
     });
-    po.observe({ type: 'largest-contentful-paint', buffered: true });
-  } catch { /* browser may not support */ }
-}
+    lcpObserver.observe({ type: 'largest-contentful-paint', buffered: true });
 
-function observeCLS() {
-  if (!('PerformanceObserver' in window)) return;
-
-  try {
-    let clsScore = 0;
-    const po = new PerformanceObserver((list) => {
-      for (const entry of list.getEntries() as any[]) {
+    // 3. Observe Cumulative Layout Shift (CLS)
+    let clsValue = 0;
+    const clsObserver = new PerformanceObserver((entryList) => {
+      for (const entry of entryList.getEntries() as any[]) {
         if (!entry.hadRecentInput) {
-          clsScore += entry.value;
+          clsValue += entry.value;
         }
       }
-      report.CLS = clsScore;
-      logVital('CLS', clsScore);
+      logger.info(`Web Vital: CLS = ${clsValue.toFixed(4)}`);
     });
-    po.observe({ type: 'layout-shift', buffered: true });
-  } catch { /* browser may not support */ }
-}
+    clsObserver.observe({ type: 'layout-shift', buffered: true });
 
-function observeINP() {
-  if (!('PerformanceObserver' in window)) return;
-
-  try {
-    const po = new PerformanceObserver((list) => {
-      for (const entry of list.getEntries() as any[]) {
-        const value = entry.duration ?? entry.processingEnd - entry.startTime;
-        if (value !== undefined) {
-          report.INP = Math.max(report.INP ?? 0, value);
-          logVital('INP', report.INP);
-        }
+    // 4. Observe Interaction to Next Paint (INP) / First Input Delay (FID)
+    const fidObserver = new PerformanceObserver((entryList) => {
+      for (const entry of entryList.getEntries() as any[]) {
+        logger.info(`Web Vital: FID = ${(entry.processingStart - entry.startTime).toFixed(2)} ms`);
       }
     });
-    po.observe({ type: 'event', buffered: true, durationThreshold: 16 } as any);
-  } catch { /* browser may not support */ }
-}
+    fidObserver.observe({ type: 'first-input', buffered: true });
 
-function observeTTFB() {
-  if (!('performance' in window && 'getEntriesByType' in performance)) return;
-
-  try {
-    const [navEntry] = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
-    if (navEntry) {
-      const ttfb = navEntry.responseStart;
-      report.TTFB = ttfb;
-      logVital('TTFB', ttfb);
-    }
-  } catch { /* browser may not support */ }
-}
-
-// ── Public API ───────────────────────────────────────────────────────────────
-
-/** Bootstrap all performance observers. Call once on app init. */
-export function initPerformanceMonitor(): void {
-  observePaint();
-  observeLCP();
-  observeCLS();
-  observeINP();
-  observeTTFB();
-  logger.info('[PerfMonitor] Web Vitals observers initialised.');
-}
-
-/** Returns the latest captured vitals snapshot. */
-export function getVitalsReport(): VitalsReport {
-  return { ...report };
+  } catch (err: any) {
+    logger.warn(`PerformanceObserver initialization warning: ${err.message}`);
+  }
 }

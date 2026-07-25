@@ -148,6 +148,7 @@ function DependencyGraphInner() {
     totalHooks: analytics.totalHooks,
     unusedCount: analytics.unusedCount,
     circularCount: analytics.circularCount,
+    architectureScore: analytics.architectureScore,
   };
 
   return (
