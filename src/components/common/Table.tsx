@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import { ReactNode } from 'react';
 import { ChevronUp, ChevronDown, Search as SearchIcon, RotateCcw, AlertCircle } from 'lucide-react';
 import Button from './Button';
 import EmptyState from './EmptyState';
@@ -105,7 +105,7 @@ export default function Table<T>({
               // Table loading skeletons
               [...Array(5)].map((_, rIdx) => (
                 <tr key={rIdx} className="border-b border-zinc-850/30">
-                  {columns.map((col, cIdx) => (
+                  {columns.map((_, cIdx) => (
                     <td key={cIdx} className="px-6 py-4">
                       <div className="h-4 bg-[#1E1F35]/50 animate-pulse rounded w-4/5" />
                     </td>

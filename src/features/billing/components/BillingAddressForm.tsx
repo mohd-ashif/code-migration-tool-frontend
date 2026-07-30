@@ -1,4 +1,3 @@
-import React from 'react';
 import { ShieldCheck } from 'lucide-react';
 import Card from '../../../shared/components/Card';
 import Button from '../../../components/common/Button';

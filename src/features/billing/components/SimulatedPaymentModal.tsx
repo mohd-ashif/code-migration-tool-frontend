@@ -1,4 +1,3 @@
-import React from 'react';
 import { Sparkles, AlertTriangle, ShieldCheck } from 'lucide-react';
 
 interface SimulatedPaymentModalProps {
