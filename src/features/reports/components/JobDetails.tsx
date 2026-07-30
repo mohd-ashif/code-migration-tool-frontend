@@ -256,7 +256,7 @@ const JobDetails = React.memo(function JobDetails() {
           )}
 
           {/* Core Metrics counters row */}
-          <div className="grid grid-cols-3 gap-2.5 pt-2 border-t border-border select-none font-mono">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-border select-none font-mono">
             <div className="bg-[#10101B]/55 border border-border p-2.5 rounded-xl text-center">
               <span className="block text-xl font-extrabold text-primary">
                 <AnimatedCounter value={report.metrics.migratedFiles} />

@@ -138,7 +138,7 @@ export default function TargetFrameworks() {
       </div>
 
       {/* Main Frameworks List Workspace Grid */}
-      <div className="flex gap-6 h-[calc(100vh-270px)] relative overflow-hidden">
+      <div className="flex gap-6 min-h-[500px] lg:h-[calc(100vh-270px)] relative overflow-hidden">
         
         {/* Left Side: Frameworks Grid and Filtering */}
         <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
@@ -177,7 +177,7 @@ export default function TargetFrameworks() {
 
           {/* Cards Grid Box */}
           <div className="flex-1 overflow-y-auto pr-1">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredFrameworks.map((fw) => (
                 <FrameworkCard
                   key={fw.id}

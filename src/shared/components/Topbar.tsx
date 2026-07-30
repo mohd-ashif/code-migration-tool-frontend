@@ -1,9 +1,9 @@
 import { useContext, useState } from 'react';
-import { Keyboard, LogOut, User, Building2, Key, Settings } from 'lucide-react';
+import { Keyboard, LogOut, User, Building2, Key, Settings, Menu } from 'lucide-react';
 import ShortcutContext from '../../shortcuts/shortcutContext';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { logout } from '../../store/slices/authSlice';
-import { setActiveTab, setSettingsSubTab } from '../../store/slices/uiSlice';
+import { setActiveTab, setSettingsSubTab, toggleMobileSidebar } from '../../store/slices/uiSlice';
 import apiClient from '../../services/http/apiClient';
 import { RootState } from '../../store';
 import { useSubscription } from '../../hooks/useBilling';
@@ -57,21 +57,33 @@ export default function Topbar() {
   const userName = user?.fullName || (user?.email?.split('@')[0] ?? 'User');
 
   return (
-    <header className="h-16 border-b border-[#1E1F35] bg-darkBg/30 backdrop-blur-md sticky top-0 z-40 px-8 flex justify-between items-center select-none">
-      {/* Workspace Chip - left of topbar */}
-      <div className="flex items-center">
+    <header className="h-16 border-b border-[#1E1F35] bg-darkBg/30 backdrop-blur-md sticky top-0 z-40 px-3 sm:px-6 lg:px-8 flex justify-between items-center select-none">
+      {/* Left side: Mobile Toggle + Workspace Chip */}
+      <div className="flex items-center gap-2">
+        {/* Mobile Hamburger Drawer Trigger */}
+        <button
+          onClick={() => dispatch(toggleMobileSidebar())}
+          className="md:hidden p-2 text-gray-400 hover:text-white hover:bg-[#1E1F35] rounded-xl transition-all cursor-pointer"
+          aria-label="Toggle navigation drawer"
+          title="Toggle Navigation Menu"
+        >
+          <Menu className="w-5 h-5 text-gray-300" />
+        </button>
+
+        {/* Workspace Chip */}
         {workspaceName && (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/5 border border-primary/15 rounded-xl">
-            <Building2 className="w-3.5 h-3.5 text-primary/70" />
-            <span className="text-[11px] font-semibold text-primary/90 max-w-[160px] truncate">{workspaceName}</span>
-            <span className={`text-[10px] font-mono border rounded px-1.5 py-0.5 font-bold capitalize transition-all ${planBadgeStyle}`}>
+          <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-primary/5 border border-primary/15 rounded-xl max-w-[180px] sm:max-w-none">
+            <Building2 className="w-3.5 h-3.5 text-primary/70 shrink-0" />
+            <span className="text-[11px] font-semibold text-primary/90 max-w-[100px] sm:max-w-[160px] truncate">{workspaceName}</span>
+            <span className={`text-[9px] sm:text-[10px] font-mono border rounded px-1.5 py-0.5 font-bold capitalize transition-all shrink-0 ${planBadgeStyle}`}>
               {planName}
             </span>
           </div>
         )}
       </div>
 
-      <div className="flex items-center gap-4">
+      {/* Right side: Admin Panel, Shortcuts & Profile Menu */}
+      <div className="flex items-center gap-2 sm:gap-4">
         {/* Admin Panel Direct Link (Owners/Admins only) */}
         {isAdmin && (
           <a
@@ -81,11 +93,11 @@ export default function Topbar() {
               window.history.pushState({}, '', '/admin');
               window.dispatchEvent(new Event('popstate'));
             }}
-            className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+            className="px-2.5 sm:px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
             title="Open Admin Panel (/admin)"
           >
             <Settings className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Admin Panel</span>
+            <span className="hidden sm:inline">Admin Panel</span>
           </a>
         )}
 
@@ -95,7 +107,7 @@ export default function Topbar() {
           className="p-2 hover:bg-[#1E1F35] text-gray-400 hover:text-white rounded-xl border border-transparent hover:border-[#2B2C4E] transition-all cursor-pointer flex items-center gap-1.5 font-mono text-[10px]"
           title="Open Keyboard Shortcuts Helper (F1)"
         >
-          <Keyboard className="w-4 h-4 text-primary" />
+          <Keyboard className="w-4 h-4 text-primary shrink-0" />
           <span className="hidden sm:inline font-semibold">Shortcuts</span>
           <kbd className="hidden md:inline-block px-1.5 py-0.5 bg-[#12131F] border border-border rounded text-[8px] font-bold">F1</kbd>
         </button>

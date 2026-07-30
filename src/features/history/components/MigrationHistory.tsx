@@ -184,8 +184,8 @@ export default function MigrationHistory() {
             initial="hidden"
             animate="show"
           >
-            {/* Table Header */}
-            <div className="grid grid-cols-[1fr_120px_120px_100px_100px_auto] gap-4 px-4 py-2.5 border-b border-[#1E1F35] text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+            {/* Desktop / Tablet Table Header */}
+            <div className="hidden sm:grid grid-cols-[1fr_120px_120px_100px_100px_auto] gap-4 px-4 py-2.5 border-b border-[#1E1F35] text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
               <span>Job ID</span>
               <span>Source</span>
               <span>Target</span>
@@ -194,7 +194,7 @@ export default function MigrationHistory() {
               <span className="text-right">Actions</span>
             </div>
 
-            {/* Table Rows */}
+            {/* Table Rows (Desktop) & Cards (Mobile) */}
             <AnimatePresence>
               {jobs.map((job) => {
                 const source = job.request?.sourceFramework ?? job.result?.sourceFramework;
@@ -202,73 +202,126 @@ export default function MigrationHistory() {
                 const statusColor = STATUS_COLORS[job.status] ?? STATUS_COLORS['pending'];
 
                 return (
-                  <motion.div
-                    key={job.id}
-                    variants={isReduced ? {} : slideUp}
-                    className="grid grid-cols-[1fr_120px_120px_100px_100px_auto] gap-4 px-4 py-3.5 border-b border-[#1E1F35]/50 hover:bg-white/[0.02] transition-colors group items-center"
-                  >
-                    {/* Job ID */}
-                    <button
-                      onClick={() => handleViewJob(job)}
-                      className="text-left font-mono text-[11px] text-zinc-300 hover:text-primary transition-colors truncate"
-                      title={job.id}
+                  <div key={job.id}>
+                    {/* Desktop/Tablet Grid Row */}
+                    <motion.div
+                      variants={isReduced ? {} : slideUp}
+                      className="hidden sm:grid grid-cols-[1fr_120px_120px_100px_100px_auto] gap-4 px-4 py-3.5 border-b border-[#1E1F35]/50 hover:bg-white/[0.02] transition-colors group items-center"
                     >
-                      {job.id.slice(0, 8)}…
-                    </button>
-
-                    {/* Source */}
-                    <span className="text-xs text-zinc-400 truncate">
-                      {getFrameworkLabel(source)}
-                    </span>
-
-                    {/* Target */}
-                    <span className="text-xs text-zinc-300 truncate">
-                      {getFrameworkLabel(target)}
-                    </span>
-
-                    {/* Status */}
-                    <div className="flex items-center gap-1.5">
-                      <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusColor.dot}`} />
-                      <StatusIcon status={job.status} />
-                      <span className="text-[11px] text-zinc-300 capitalize">{job.status}</span>
-                    </div>
-
-                    {/* Date */}
-                    <span className="text-[11px] text-zinc-500 font-mono">
-                      {formatDate(job.created_at)}
-                    </span>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-1 justify-end">
-                      {job.status === 'completed' && (
-                        <a
-                          href={`/api/download?jobId=${job.id}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="p-1.5 text-zinc-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
-                          title="Download"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                        </a>
-                      )}
-                      {(job.status === 'failed' || job.status === 'cancelled') && (
-                        <button
-                          onClick={() => handleRetry(job)}
-                          className="p-1.5 text-zinc-500 hover:text-amber-400 hover:bg-amber-400/10 rounded-lg transition-all"
-                          title="Retry"
-                        >
-                          <RefreshCw className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+                      {/* Job ID */}
                       <button
-                        onClick={() => handleDelete(job.id)}
-                        className="p-1.5 text-zinc-600 hover:text-rose-400 hover:bg-rose-400/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                        title="Delete"
+                        onClick={() => handleViewJob(job)}
+                        className="text-left font-mono text-[11px] text-zinc-300 hover:text-primary transition-colors truncate"
+                        title={job.id}
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        {job.id.slice(0, 8)}…
                       </button>
-                    </div>
-                  </motion.div>
+
+                      {/* Source */}
+                      <span className="text-xs text-zinc-400 truncate">
+                        {getFrameworkLabel(source)}
+                      </span>
+
+                      {/* Target */}
+                      <span className="text-xs text-zinc-300 truncate">
+                        {getFrameworkLabel(target)}
+                      </span>
+
+                      {/* Status */}
+                      <div className="flex items-center gap-1.5">
+                        <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusColor.dot}`} />
+                        <StatusIcon status={job.status} />
+                        <span className="text-[11px] text-zinc-300 capitalize">{job.status}</span>
+                      </div>
+
+                      {/* Date */}
+                      <span className="text-[11px] text-zinc-500 font-mono">
+                        {formatDate(job.created_at)}
+                      </span>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-1 justify-end">
+                        {job.status === 'completed' && (
+                          <a
+                            href={`/api/download?jobId=${job.id}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="p-1.5 text-zinc-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
+                            title="Download"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                          </a>
+                        )}
+                        {(job.status === 'failed' || job.status === 'cancelled') && (
+                          <button
+                            onClick={() => handleRetry(job)}
+                            className="p-1.5 text-zinc-500 hover:text-amber-400 hover:bg-amber-400/10 rounded-lg transition-all"
+                            title="Retry"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDelete(job.id)}
+                          className="p-1.5 text-zinc-600 hover:text-rose-400 hover:bg-rose-400/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </motion.div>
+
+                    {/* Mobile Stacked Card View */}
+                    <motion.div
+                      variants={isReduced ? {} : slideUp}
+                      className="sm:hidden p-4 border-b border-[#1E1F35] bg-[#0A0B14]/40 space-y-3"
+                    >
+                      <div className="flex justify-between items-start gap-2">
+                        <button
+                          onClick={() => handleViewJob(job)}
+                          className="font-mono text-xs font-bold text-primary truncate"
+                        >
+                          {job.id}
+                        </button>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <StatusIcon status={job.status} />
+                          <span className="text-[11px] text-zinc-300 capitalize">{job.status}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-center text-xs font-mono text-zinc-400 border-t border-[#1E1F35]/50 pt-2">
+                        <span>{getFrameworkLabel(source)} → {getFrameworkLabel(target)}</span>
+                        <span className="text-[10px] text-zinc-500">{formatDate(job.created_at)}</span>
+                      </div>
+
+                      <div className="flex items-center justify-end gap-2 pt-1">
+                        {job.status === 'completed' && (
+                          <a
+                            href={`/api/download?jobId=${job.id}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all"
+                          >
+                            <Download className="w-3.5 h-3.5" /> Download
+                          </a>
+                        )}
+                        {(job.status === 'failed' || job.status === 'cancelled') && (
+                          <button
+                            onClick={() => handleRetry(job)}
+                            className="px-3 py-1.5 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" /> Retry
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDelete(job.id)}
+                          className="px-3 py-1.5 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" /> Delete
+                        </button>
+                      </div>
+                    </motion.div>
+                  </div>
                 );
               })}
             </AnimatePresence>

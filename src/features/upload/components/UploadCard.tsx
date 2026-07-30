@@ -360,7 +360,7 @@ const UploadCard = React.memo(function UploadCard({ disabled = false }: UploadCa
               {/* Target chips */}
               <div className="space-y-2 select-none">
                 <span className="text-[10px] text-muted-foreground uppercase font-mono block">Select Target Framework</span>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {chips.map((chip) => (
                     <button
                       key={chip.value}

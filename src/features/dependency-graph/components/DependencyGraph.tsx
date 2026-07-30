@@ -171,8 +171,8 @@ function DependencyGraphInner() {
         totalEdges={analytics.totalEdges}
       />
 
-      {/* Main canvas area */}
-      <div className="flex gap-4" style={{ height: '580px', minHeight: '580px' }}>
+      {/* Main graph body: flex-col on mobile, flex-row on lg */}
+      <div className="flex flex-col lg:flex-row gap-4 min-h-[480px] lg:h-[calc(100vh-270px)]">
 
         {/* Filters Panel */}
         {showFilters && (
@@ -222,7 +222,7 @@ function DependencyGraphInner() {
         </div>
 
         {/* Right column — inspector + optional stats */}
-        <div className="shrink-0 flex flex-col gap-3 overflow-y-auto" style={{ width: '256px' }}>
+        <div className="w-full lg:w-64 shrink-0 flex flex-col gap-3 overflow-y-auto">
           {showStats && (
             <StatisticsPanel summary={analytics} onClose={() => setShowStats(false)} />
           )}
