@@ -13,8 +13,8 @@ RUN npm ci --workspace=packages/frontend
 COPY packages/frontend ./packages/frontend
 
 # Build time environment arguments
-ARG VITE_API_BASE_URL
-ARG VITE_WS_URL
+ARG VITE_API_BASE_URL=https://code-migration-tool.onrender.com
+ARG VITE_WS_URL=wss://code-migration-tool.onrender.com
 ARG VITE_RAZORPAY_KEY_ID
 
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL

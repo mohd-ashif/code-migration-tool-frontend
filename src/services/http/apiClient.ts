@@ -5,12 +5,12 @@ import { setCredentials, logout } from '../../store/slices/authSlice';
 import { logger } from '../../utils/logger';
 import { toast } from '../toast/toast.service';
 
-export const API_KEY = (import.meta as any).env?.VITE_API_KEY || 'your-api-key-here';
+export const API_KEY = import.meta.env.VITE_API_KEY || 'your-api-key-here';
 
 // ── Axios instance ────────────────────────────────────────────────────────────
 
 const apiClient = axios.create({
-  baseURL: (import.meta as any).env?.VITE_API_BASE_URL || '',          // Relative paths — Vite proxies to backend
+  baseURL: import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'https://code-migration-tool.onrender.com',
   timeout: 30_000,      // 30 s
   withCredentials: true,
   headers: {
