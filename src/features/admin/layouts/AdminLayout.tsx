@@ -12,6 +12,7 @@ import {
   BarChart3,
   Flag,
   ShieldCheck,
+  ShieldAlert,
   ArrowLeft,
   Menu,
   X
@@ -41,8 +42,8 @@ import { AdminBillingOpsPage } from '../pages/AdminBillingOpsPage';
 
 export const AdminLayout: React.FC = () => {
   const user = useAppSelector((state) => state.auth.user);
-  const currentWorkspaceRole = useAppSelector((state) => state.workspace.currentWorkspaceRole);
-  const isAdmin = currentWorkspaceRole === 'owner' || currentWorkspaceRole === 'admin';
+  const systemRole = (user as any)?.systemRole || (user as any)?.system_role;
+  const isAdmin = systemRole === 'SUPER_ADMIN' || systemRole === 'ADMIN';
   const [mobileOpen, setMobileOpen] = useState(false);
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
 
@@ -104,8 +105,6 @@ export const AdminLayout: React.FC = () => {
     { label: 'Feature Flags', path: '/admin/feature-flags', icon: Flag },
     { label: 'Audit Trail', path: '/admin/audit-logs', icon: ShieldCheck },
   ];
-
-  const systemRole = (user as any)?.systemRole || (user as any)?.system_role || 'SUPER_ADMIN';
 
   const renderActiveModule = () => {
     if (currentPath.startsWith('/admin/users/')) {

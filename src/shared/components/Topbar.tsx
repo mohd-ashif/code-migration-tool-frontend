@@ -13,8 +13,8 @@ export default function Topbar() {
   const user = useAppSelector((state: RootState) => state.auth.user);
   const workspaceId = useAppSelector((state: RootState) => state.workspace.currentWorkspaceId);
   const workspaceName = useAppSelector((state: RootState) => state.workspace.currentWorkspaceName);
-  const currentWorkspaceRole = useAppSelector((state: RootState) => state.workspace.currentWorkspaceRole);
-  const isAdmin = currentWorkspaceRole === 'owner' || currentWorkspaceRole === 'admin';
+  const systemRole = (user as any)?.systemRole || (user as any)?.system_role;
+  const isAdmin = systemRole === 'SUPER_ADMIN' || systemRole === 'ADMIN';
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const shortcutCtx = useContext(ShortcutContext);
   const setIsHelpOpen = shortcutCtx?.setIsHelpOpen || (() => {});
