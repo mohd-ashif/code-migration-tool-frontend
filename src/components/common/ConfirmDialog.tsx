@@ -110,3 +110,5 @@ export default function ConfirmDialog({
     ? createPortal(dialogElement, document.body)
     : null;
 }
+
+export { ConfirmDialog };

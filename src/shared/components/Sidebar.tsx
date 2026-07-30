@@ -94,6 +94,26 @@ export default function Sidebar() {
                       </li>
                     );
                   })}
+
+                {key === 'CONFIGURE' && (
+                  <li>
+                    <a
+                      href="/admin"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        window.history.pushState({}, '', '/admin');
+                        window.dispatchEvent(new Event('popstate'));
+                      }}
+                      className={`w-full flex items-center rounded-xl text-xs font-semibold tracking-wide transition-all text-indigo-300 hover:bg-indigo-500/10 cursor-pointer ${
+                        collapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2.5'
+                      }`}
+                      title={collapsed ? 'Admin Panel' : undefined}
+                    >
+                      <Settings className="w-4 h-4 shrink-0 text-indigo-400" />
+                      {!collapsed && <span>Admin Panel</span>}
+                    </a>
+                  </li>
+                )}
               </ul>
             </div>
           ))}

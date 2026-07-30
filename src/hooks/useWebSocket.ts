@@ -30,13 +30,19 @@ export function useWebSocket(jobId?: string, workspaceId?: string) {
     const createSocket = () => {
       if (!jobId && !workspaceId) return;
 
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.hostname === 'localhost' ? 'localhost:4000' : window.location.host;
       const queryParams = new URLSearchParams();
       if (jobId) queryParams.set('jobId', jobId);
       if (workspaceId) queryParams.set('workspaceId', workspaceId);
 
-      const wsUrl = `${protocol}//${host}/ws/migration?${queryParams.toString()}`;
+      const customWsUrl = (import.meta as any).env?.VITE_WS_URL;
+      let wsUrl = '';
+      if (customWsUrl) {
+        wsUrl = `${customWsUrl}/ws/migration?${queryParams.toString()}`;
+      } else {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.hostname === 'localhost' ? 'localhost:4000' : window.location.host;
+        wsUrl = `${protocol}//${host}/ws/migration?${queryParams.toString()}`;
+      }
 
       try {
         const socket = new WebSocket(wsUrl);

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useContext } from 'react';
+import { lazy, Suspense, useEffect, useRef, useContext, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from '../shared/components/Sidebar';
 import Topbar from '../shared/components/Topbar';
@@ -461,6 +461,26 @@ function AppContent() {
 
 // ── Root export ───────────────────────────────────────────────────────────────
 
+import { AdminLayout } from '../features/admin/layouts/AdminLayout';
+
+function AppRouter() {
+  const [pathname, setPathname] = useState(window.location.pathname);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setPathname(window.location.pathname);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  if (pathname.startsWith('/admin')) {
+    return <AdminLayout />;
+  }
+
+  return <AppContent />;
+}
+
 export default function App() {
   // Initialise performance monitoring once at root, outside React render tree
   useEffect(() => {
@@ -475,7 +495,7 @@ export default function App() {
           <ThemeProvider>
             <ShortcutProvider>
               <ToastProvider>
-                <AppContent />
+                <AppRouter />
               </ToastProvider>
             </ShortcutProvider>
           </ThemeProvider>
