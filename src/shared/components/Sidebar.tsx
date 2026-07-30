@@ -14,6 +14,8 @@ export default function Sidebar() {
   const collapsed = useAppSelector((state: RootState) => state.ui.isSidebarCollapsed);
   const isReduced = useReducedMotion();
   const { usage } = useUsage();
+  const currentWorkspaceRole = useAppSelector((state) => state.workspace.currentWorkspaceRole);
+  const isAdmin = currentWorkspaceRole === 'owner' || currentWorkspaceRole === 'admin';
 
   const menuItems: Array<{ id: ActiveTab; label: string; icon: any; category: 'WORKSPACE' | 'HISTORY' | 'CONFIGURE' }> = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, category: 'WORKSPACE' },
@@ -95,7 +97,7 @@ export default function Sidebar() {
                     );
                   })}
 
-                {key === 'CONFIGURE' && (
+                {key === 'CONFIGURE' && isAdmin && (
                   <li>
                     <a
                       href="/admin"

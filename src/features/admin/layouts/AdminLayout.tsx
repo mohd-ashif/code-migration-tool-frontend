@@ -41,8 +41,33 @@ import { AdminBillingOpsPage } from '../pages/AdminBillingOpsPage';
 
 export const AdminLayout: React.FC = () => {
   const user = useAppSelector((state) => state.auth.user);
+  const currentWorkspaceRole = useAppSelector((state) => state.workspace.currentWorkspaceRole);
+  const isAdmin = currentWorkspaceRole === 'owner' || currentWorkspaceRole === 'admin';
   const [mobileOpen, setMobileOpen] = useState(false);
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-[#07070C] text-white flex flex-col items-center justify-center p-6 text-center">
+        <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-2xl mb-5 max-w-md shadow-glow-sm">
+          <ShieldAlert className="w-12 h-12 text-red-400 mx-auto mb-3" />
+          <h1 className="text-xl font-bold text-slate-100">Access Denied</h1>
+          <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+            You do not have Administrator permissions for this workspace. Only Workspace Owners and Admins can access administrative controls.
+          </p>
+        </div>
+        <button
+          onClick={() => {
+            window.history.pushState({}, '', '/');
+            window.dispatchEvent(new Event('popstate'));
+          }}
+          className="px-5 py-2.5 bg-primary hover:bg-primary/80 text-white font-semibold text-xs rounded-xl shadow-glow transition-all cursor-pointer"
+        >
+          Return to Workspace Dashboard
+        </button>
+      </div>
+    );
+  }
 
   useEffect(() => {
     const handlePopState = () => {
