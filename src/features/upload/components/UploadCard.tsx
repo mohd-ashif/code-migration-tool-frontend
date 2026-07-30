@@ -283,7 +283,7 @@ const UploadCard = React.memo(function UploadCard({ disabled = false }: UploadCa
                   accept=".zip"
                   onChange={handleChange}
                 />
-                
+
                 <motion.div 
                   animate={dragActive && !isReduced ? { y: [0, -8, 0], transition: { repeat: Infinity, duration: 0.8 } } : {}}
                   className="p-3 bg-primary/10 text-primary border border-primary/20 rounded-xl mb-3 group-hover:scale-105 transition-transform duration-300 shadow-glow"
