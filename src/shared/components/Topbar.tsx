@@ -13,6 +13,8 @@ export default function Topbar() {
   const user = useAppSelector((state: RootState) => state.auth.user);
   const workspaceId = useAppSelector((state: RootState) => state.workspace.currentWorkspaceId);
   const workspaceName = useAppSelector((state: RootState) => state.workspace.currentWorkspaceName);
+  const currentWorkspaceRole = useAppSelector((state: RootState) => state.workspace.currentWorkspaceRole);
+  const isAdmin = currentWorkspaceRole === 'owner' || currentWorkspaceRole === 'admin';
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const shortcutCtx = useContext(ShortcutContext);
   const setIsHelpOpen = shortcutCtx?.setIsHelpOpen || (() => {});
@@ -70,20 +72,22 @@ export default function Topbar() {
       </div>
 
       <div className="flex items-center gap-4">
-        {/* Admin Panel Direct Link */}
-        <a
-          href="/admin"
-          onClick={(e) => {
-            e.preventDefault();
-            window.history.pushState({}, '', '/admin');
-            window.dispatchEvent(new Event('popstate'));
-          }}
-          className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
-          title="Open Admin Panel (/admin)"
-        >
-          <Settings className="w-3.5 h-3.5 text-indigo-400" />
-          <span>Admin Panel</span>
-        </a>
+        {/* Admin Panel Direct Link (Owners/Admins only) */}
+        {isAdmin && (
+          <a
+            href="/admin"
+            onClick={(e) => {
+              e.preventDefault();
+              window.history.pushState({}, '', '/admin');
+              window.dispatchEvent(new Event('popstate'));
+            }}
+            className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+            title="Open Admin Panel (/admin)"
+          >
+            <Settings className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Admin Panel</span>
+          </a>
+        )}
 
         {/* Keyboard Shortcuts Trigger Button */}
         <button
