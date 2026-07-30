@@ -18,6 +18,7 @@ interface UiState {
   isOffline: boolean;
   settingsSubTab: SettingsSubTab;
   isSidebarCollapsed: boolean;
+  isMobileSidebarOpen: boolean;
   isUpgradeModalOpen: boolean;
   selectedPlanSlug: string | null;
 }
@@ -35,6 +36,7 @@ const initialState: UiState = {
   isOffline: false,
   settingsSubTab: 'profile',
   isSidebarCollapsed: getStoredCollapsed(),
+  isMobileSidebarOpen: false,
   isUpgradeModalOpen: false,
   selectedPlanSlug: null,
 };
@@ -68,6 +70,12 @@ const uiSlice = createSlice({
         console.error('Failed to save sidebar state', err);
       }
     },
+    setMobileSidebarOpen: (state: UiState, action: PayloadAction<boolean>) => {
+      state.isMobileSidebarOpen = action.payload;
+    },
+    toggleMobileSidebar: (state: UiState) => {
+      state.isMobileSidebarOpen = !state.isMobileSidebarOpen;
+    },
     setUpgradeModalOpen: (state: UiState, action: PayloadAction<boolean>) => {
       state.isUpgradeModalOpen = action.payload;
     },
@@ -83,6 +91,8 @@ export const {
   setOfflineStatus, 
   setSidebarCollapsed, 
   toggleSidebar,
+  setMobileSidebarOpen,
+  toggleMobileSidebar,
   setUpgradeModalOpen,
   setSelectedPlanSlug
 } = uiSlice.actions;

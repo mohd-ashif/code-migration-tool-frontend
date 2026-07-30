@@ -9,7 +9,7 @@ interface AuthLayoutProps {
 
 export default function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
   return (
-    <div className="min-h-screen bg-[#0B0B12] text-white flex items-center justify-center p-6 relative overflow-hidden font-sans">
+    <div className="min-h-[100dvh] bg-[#0B0B12] text-white flex items-center justify-center p-4 sm:p-6 lg:p-8 relative overflow-hidden font-sans">
       {/* Futuristic Background Blur Gradients */}
       <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-gradient-to-br from-[#7C6CFF]/20 to-transparent blur-[120px]" />
       <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-gradient-to-tl from-[#5C5CFF]/15 to-transparent blur-[120px]" />
@@ -19,7 +19,7 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: 'easeOut' }}
-        className="w-full max-w-md bg-[#12131F]/60 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl relative z-10"
+        className="w-full max-w-md bg-[#12131F]/60 backdrop-blur-xl border border-white/10 rounded-3xl p-5 sm:p-8 shadow-2xl relative z-10"
       >
         {/* Branding & Header */}
         <div className="text-center mb-8">
