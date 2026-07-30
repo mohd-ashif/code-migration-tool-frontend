@@ -43,12 +43,16 @@ export default function LinkedAccountsTab({
               Disconnect
             </button>
           ) : (
-            <a
-              href="/api/auth/google"
-              className="px-3.5 py-1.5 bg-[#7C6CFF] text-white text-[10px] font-bold rounded-xl shadow-glow-sm hover:scale-[1.02] active:scale-[0.98] transition-all"
+            <button
+              type="button"
+              onClick={() => {
+                const apiBase = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'https://code-migration-tool.onrender.com';
+                window.location.href = `${apiBase}/api/auth/google`;
+              }}
+              className="px-3.5 py-1.5 bg-[#7C6CFF] text-white text-[10px] font-bold rounded-xl shadow-glow-sm hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
             >
               Connect
-            </a>
+            </button>
           )}
         </div>
 
@@ -75,12 +79,16 @@ export default function LinkedAccountsTab({
               Disconnect
             </button>
           ) : (
-            <a
-              href="/api/auth/github"
-              className="px-3.5 py-1.5 bg-[#7C6CFF] text-white text-[10px] font-bold rounded-xl shadow-glow-sm hover:scale-[1.02] active:scale-[0.98] transition-all"
+            <button
+              type="button"
+              onClick={() => {
+                const apiBase = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'https://code-migration-tool.onrender.com';
+                window.location.href = `${apiBase}/api/auth/github`;
+              }}
+              className="px-3.5 py-1.5 bg-[#7C6CFF] text-white text-[10px] font-bold rounded-xl shadow-glow-sm hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
             >
               Connect
-            </a>
+            </button>
           )}
         </div>
       </div>

@@ -197,7 +197,7 @@ export default function BillingView() {
 
       // Configure Razorpay Options
       const options = {
-        key: checkoutData.razorpayKeyId,
+        key: checkoutData.razorpayKeyId || import.meta.env.VITE_RAZORPAY_KEY_ID || '',
         amount: checkoutData.amount,
         currency: checkoutData.currency,
         name: 'AI Code Migration Studio',

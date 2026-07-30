@@ -10,6 +10,7 @@ node_modules/.vite/
 # Local environment variables
 .env
 .env.*
+!.env.example
 
 # TypeScript
 *.tsbuildinfo

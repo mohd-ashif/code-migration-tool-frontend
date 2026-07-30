@@ -34,13 +34,13 @@ export function useWebSocket(jobId?: string, workspaceId?: string) {
       if (jobId) queryParams.set('jobId', jobId);
       if (workspaceId) queryParams.set('workspaceId', workspaceId);
 
-      const customWsUrl = (import.meta as any).env?.VITE_WS_URL;
+      const customWsUrl = import.meta.env.VITE_WS_URL;
       let wsUrl = '';
       if (customWsUrl) {
         wsUrl = `${customWsUrl}/ws/migration?${queryParams.toString()}`;
       } else {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = window.location.hostname === 'localhost' ? 'localhost:4000' : window.location.host;
+        const host = window.location.hostname === 'localhost' ? 'localhost:4000' : 'code-migration-tool.onrender.com';
         wsUrl = `${protocol}//${host}/ws/migration?${queryParams.toString()}`;
       }
 
