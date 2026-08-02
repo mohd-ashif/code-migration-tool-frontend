@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Sparkles, Lock } from 'lucide-react';
 import Card from '../../../components/ui/Card';
 import Button from '../../../components/ui/Button';
 import { defaultTransition } from '../../../animations/variants';
@@ -9,9 +9,6 @@ interface PricingGridProps {
   plans: any[];
   currentPlanSlug: string;
   billingCycle: 'monthly' | 'yearly';
-  loadingRazorpay: boolean;
-  activeCheckoutPlan: string | null;
-  mockPaymentDetails: any;
   handleCheckout: (slug: string) => void;
 }
 
@@ -19,9 +16,6 @@ export default function PricingGrid({
   plans,
   currentPlanSlug,
   billingCycle,
-  loadingRazorpay,
-  activeCheckoutPlan,
-  mockPaymentDetails,
   handleCheckout,
 }: PricingGridProps) {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -30,13 +24,8 @@ export default function PricingGrid({
   const cardsPerPage = 3;
   const maxIndex = Math.max(0, filterPlans.length - cardsPerPage);
 
-  const handleNext = () => {
-    setActiveIndex((prev) => Math.min(prev + 1, maxIndex));
-  };
-
-  const handlePrev = () => {
-    setActiveIndex((prev) => Math.max(prev - 1, 0));
-  };
+  const handleNext = () => setActiveIndex((prev) => Math.min(prev + 1, maxIndex));
+  const handlePrev = () => setActiveIndex((prev) => Math.max(prev - 1, 0));
 
   const formatFeatureLabel = (key: string, value: string) => {
     if (!value || value === 'false' || value === '0') return null;
@@ -98,7 +87,6 @@ export default function PricingGrid({
           <p className="text-xs text-zinc-400 mt-1">Select a plan to unlock features and scale your code migrations.</p>
         </div>
 
-        {/* Senior UI Framer Motion Carousel Controls */}
         {filterPlans.length > cardsPerPage && (
           <div className="flex items-center space-x-3">
             {/* Pagination Indicators */}
@@ -155,7 +143,6 @@ export default function PricingGrid({
             const isCurrent = currentPlanSlug === plan.slug;
             const price = billingCycle === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice;
             const priceLabel = billingCycle === 'yearly' ? 'year' : 'month';
-            const isPlanLoading = loadingRazorpay && (activeCheckoutPlan === plan.slug || mockPaymentDetails?.planSlug === plan.slug);
 
             return (
               <motion.div
@@ -214,13 +201,18 @@ export default function PricingGrid({
 
                   <div className="mt-8 pt-4 border-t border-zinc-800/30">
                     <Button
-                      disabled={isCurrent || loadingRazorpay}
+                      disabled={isCurrent}
                       onClick={() => handleCheckout(plan.slug)}
                       variant={isCurrent ? 'secondary' : 'primary'}
-                      loading={isPlanLoading}
                       className="w-full py-3 rounded-xl text-xs font-bold font-mono transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-lg"
                     >
-                      {isCurrent ? 'Active Plan' : `Upgrade to ${plan.name}`}
+                      {isCurrent ? (
+                        <>
+                          <Lock className="w-3.5 h-3.5" /> Active Plan
+                        </>
+                      ) : (
+                        `Upgrade to ${plan.name}`
+                      )}
                     </Button>
                   </div>
                 </Card>
