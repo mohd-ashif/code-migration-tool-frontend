@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Users, Trash2 } from 'lucide-react';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 

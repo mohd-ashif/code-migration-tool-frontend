@@ -1,4 +1,3 @@
-import React from 'react';
 import { UserPlus, Mail } from 'lucide-react';
 
 interface WorkspaceInviteFormProps {

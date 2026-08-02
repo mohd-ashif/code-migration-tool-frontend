@@ -1,4 +1,3 @@
-import React from 'react';
 import { useAdminAiUsage } from '../hooks/useAdminExtendedAnalytics';
 import { Sparkles, Cpu, TrendingUp } from 'lucide-react';
 import Skeleton from '../../../components/ui/Skeleton';
