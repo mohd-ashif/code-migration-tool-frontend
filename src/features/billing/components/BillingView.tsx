@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Sparkles, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Sparkles, ShieldCheck } from 'lucide-react';
 import { useAppSelector } from '../../../store';
+import { UserDto } from '../../../store/slices/authSlice';
 import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
 import Progress from '../../../shared/components/Progress';
@@ -10,7 +11,6 @@ import {
   useSubscription,
   useUsage,
   useInvoices,
-  useCheckout,
   useBilling,
   SubscriptionAddress
 } from '../../../hooks/useBilling';
@@ -21,7 +21,7 @@ import BillingAddressForm from './BillingAddressForm';
 import PromoCouponSection from './PromoCouponSection';
 import InvoicesList from './InvoicesList';
 import PaymentHistoryTable from './PaymentHistoryTable';
-import SimulatedPaymentModal from './SimulatedPaymentModal';
+import CheckoutDialog from './checkout';
 import EnterpriseInvoicePreview from './EnterpriseInvoicePreview';
 import { toast } from '../../../services/toast/toast.service';
 import ConfirmModal from '../../../components/ui/ConfirmDialog';
@@ -37,18 +37,20 @@ export default function BillingView() {
   const { data: invoices, refetch: refetchInvoices } = useInvoices(workspaceId || undefined);
 
   // Mutations
-  const checkoutMutation = useCheckout();
-  const { verifyPayment, cancelSubscription, resumeSubscription, applyCoupon, saveAddress } = useBilling();
+  const { cancelSubscription, resumeSubscription, applyCoupon, saveAddress } = useBilling();
 
   // Component States
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+
+  // Coupon state (for the PromoCouponSection below the pricing grid)
   const [couponCode, setCouponCode] = useState('');
-  const [couponDiscount, setCouponDiscount] = useState<any | null>(null);
   const [couponError, setCouponError] = useState('');
   const [couponSuccess, setCouponSuccess] = useState('');
-  const [showMockPaymentModal, setShowMockPaymentModal] = useState(false);
-  const [mockPaymentDetails, setMockPaymentDetails] = useState<any | null>(null);
-  
+
+  // Checkout Dialog State
+  const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
+  const [checkoutPlan, setCheckoutPlan] = useState<any | null>(null);
+
   // Billing Address States
   const [address, setAddress] = useState<SubscriptionAddress>({
     companyName: '',
@@ -64,10 +66,10 @@ export default function BillingView() {
   });
 
   const [addressSaved, setAddressSaved] = useState(false);
-  const [checkoutError, setCheckoutError] = useState('');
-  const [loadingRazorpay, setLoadingRazorpay] = useState(false);
-  const [activeCheckoutPlan, setActiveCheckoutPlan] = useState<string | null>(null);
   const [selectedPreviewInvoice, setSelectedPreviewInvoice] = useState<any | null>(null);
+
+  const [showCancelSubModal, setShowCancelSubModal] = useState(false);
+  const [isCancellingSub, setIsCancellingSub] = useState(false);
 
   // Sync address form with existing sub address if available
   useEffect(() => {
@@ -89,174 +91,43 @@ export default function BillingView() {
     }
   }, [subscription, user]);
 
-  const loadRazorpayScript = (): Promise<boolean> => {
-    return new Promise((resolve) => {
-      if ((window as any).Razorpay) {
-        resolve(true);
-        return;
-      }
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      
-      const timeout = setTimeout(() => {
-        resolve(false);
-      }, 5000); // 5 seconds script-load timeout
-
-      script.onload = () => {
-        clearTimeout(timeout);
-        resolve(true);
-      };
-      script.onerror = () => {
-        clearTimeout(timeout);
-        resolve(false);
-      };
-      document.body.appendChild(script);
-    });
-  };
-
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) return;
     try {
       setCouponError('');
       setCouponSuccess('');
       const coupon = await applyCoupon.mutateAsync(couponCode);
-      setCouponDiscount(coupon);
       setCouponSuccess(`Coupon applied! ${coupon.discountType === 'percentage' ? `${coupon.discountValue}%` : `₹${coupon.discountValue}`} discount.`);
     } catch (err: any) {
-      setCouponDiscount(null);
       setCouponError(err.response?.data?.message || 'Invalid or expired coupon.');
     }
   };
 
-  const handleSimulatePaymentSuccess = async () => {
-    if (!mockPaymentDetails) return;
-    try {
-      setLoadingRazorpay(true);
-      if (mockPaymentDetails?.planSlug) {
-        setActiveCheckoutPlan(mockPaymentDetails.planSlug);
-      }
-      setShowMockPaymentModal(false);
-      await verifyPayment.mutateAsync({
-        paymentId: `pay_mock_${Math.random().toString(36).substring(2, 12)}`,
-        signature: 'mock_signature_success',
-        subscriptionId: mockPaymentDetails.subscriptionId,
-      });
-      await refetchSub();
-      await refetchUsage();
-      await refetchInvoices();
-      setCouponDiscount(null);
-      setCouponCode('');
-    } catch (verifyErr: any) {
-      setCheckoutError('Simulated payment verification failed.');
-    } finally {
-      setLoadingRazorpay(false);
-      setActiveCheckoutPlan(null);
-      setMockPaymentDetails(null);
-    }
+  /**
+   * Opens the checkout dialog for the selected plan.
+   * The CheckoutDialog handles ALL payment logic internally —
+   * no direct Razorpay calls happen here.
+   */
+  const handleCheckout = (planSlug: string) => {
+    const selectedPlan = plans?.find((p: any) => p.slug === planSlug);
+    if (!selectedPlan) return;
+    setCheckoutPlan(selectedPlan);
+    setCheckoutDialogOpen(true);
   };
 
-  const handleSimulatePaymentFailure = () => {
-    setShowMockPaymentModal(false);
-    setMockPaymentDetails(null);
-    setCheckoutError('Simulated payment was cancelled.');
+  /**
+   * Called by CheckoutDialog after successful payment + verification.
+   * Refreshes all billing-related queries to reflect new subscription.
+   */
+  const handleCheckoutSuccess = async () => {
+    await refetchSub();
+    await refetchUsage();
+    await refetchInvoices();
+    setCouponCode('');
+    toast.success('Subscription activated! Welcome to your new plan.');
   };
 
-  const handleCheckout = async (planSlug: string) => {
-    try {
-      setCheckoutError('');
-      setLoadingRazorpay(true);
-      setActiveCheckoutPlan(planSlug);
-
-      // Validate address
-      if (!address.addressLine1 || !address.city || !address.state || !address.pinCode) {
-        setCheckoutError('Please fill out and save your billing address details before upgrading.');
-        setLoadingRazorpay(false);
-        setActiveCheckoutPlan(null);
-        return;
-      }
-
-      // Call Backend Checkout API
-      const checkoutData = await checkoutMutation.mutateAsync({
-        planSlug,
-        billingCycle,
-        billingAddress: address,
-        couponCode: couponDiscount?.code || undefined,
-      });
-
-      if (checkoutData.isMock) {
-        setMockPaymentDetails({ ...checkoutData, planSlug });
-        setShowMockPaymentModal(true);
-        setLoadingRazorpay(false);
-        setActiveCheckoutPlan(null);
-        return;
-      }
-
-      // Load Razorpay Script
-      const scriptLoaded = await loadRazorpayScript();
-      if (!scriptLoaded) {
-        throw new Error('Failed to load Razorpay Payment Gateway. Check your internet connection.');
-      }
-
-      // Configure Razorpay Options
-      const options = {
-        key: checkoutData.razorpayKeyId || import.meta.env.VITE_RAZORPAY_KEY_ID || '',
-        amount: checkoutData.amount,
-        currency: checkoutData.currency,
-        name: 'AI Code Migration Studio',
-        description: `Upgrade subscription to ${planSlug}`,
-        subscription_id: checkoutData.subscriptionId,
-        prefill: {
-          name: checkoutData.customerName,
-          email: checkoutData.customerEmail,
-          contact: checkoutData.customerPhone,
-        },
-        handler: async (response: any) => {
-          try {
-            setLoadingRazorpay(true);
-            setActiveCheckoutPlan(planSlug);
-            await verifyPayment.mutateAsync({
-              paymentId: response.razorpay_payment_id,
-              signature: response.razorpay_signature,
-              subscriptionId: response.razorpay_subscription_id,
-            });
-            await refetchSub();
-            await refetchUsage();
-            await refetchInvoices();
-            setCouponDiscount(null);
-            setCouponCode('');
-          } catch (verifyErr: any) {
-            setCheckoutError('Payment completed, but verification failed. Contact support.');
-          } finally {
-            setLoadingRazorpay(false);
-            setActiveCheckoutPlan(null);
-          }
-        },
-        modal: {
-          ondismiss: () => {
-            setLoadingRazorpay(false);
-            setActiveCheckoutPlan(null);
-          },
-        },
-        theme: {
-          color: '#7C6CFF',
-        },
-      };
-
-      const rzp = new (window as any).Razorpay(options);
-      rzp.open();
-    } catch (err: any) {
-      setCheckoutError(err.response?.data?.message || err.message || 'Checkout failed.');
-      setLoadingRazorpay(false);
-      setActiveCheckoutPlan(null);
-    }
-  };
-
-  const [showCancelSubModal, setShowCancelSubModal] = useState(false);
-  const [isCancellingSub, setIsCancellingSub] = useState(false);
-
-  const handleCancelSubClick = () => {
-    setShowCancelSubModal(true);
-  };
+  const handleCancelSubClick = () => setShowCancelSubModal(true);
 
   const confirmCancelSub = async () => {
     setIsCancellingSub(true);
@@ -265,7 +136,7 @@ export default function BillingView() {
       toast.success('Subscription cancelled. It will remain active until the end of the billing period.');
       setShowCancelSubModal(false);
       refetchSub();
-    } catch (err: any) {
+    } catch {
       toast.error('Failed to cancel subscription.');
     } finally {
       setIsCancellingSub(false);
@@ -277,7 +148,7 @@ export default function BillingView() {
       await resumeSubscription.mutateAsync();
       toast.success('Subscription resumed successfully.');
       refetchSub();
-    } catch (err) {
+    } catch {
       toast.error('Failed to resume subscription.');
     }
   };
@@ -297,7 +168,7 @@ export default function BillingView() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-16 animate-fade-in">
-      
+
       {/* Upper header overview */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-zinc-800/80 pb-6">
         <div>
@@ -307,7 +178,7 @@ export default function BillingView() {
           </h2>
           <p className="text-zinc-500 text-xs mt-1">Manage subscription tiers, GST details, payment methods, and invoices.</p>
         </div>
-        
+
         {/* Toggle Billing Cycle */}
         <div className="flex bg-[#121324] border border-zinc-800 rounded-xl p-1 self-start md:self-center">
           <Button
@@ -328,19 +199,9 @@ export default function BillingView() {
         </div>
       </div>
 
-      {checkoutError && (
-        <div className="bg-destructive/10 border border-destructive/20 rounded-2xl p-4 flex items-start gap-3">
-          <AlertTriangle className="text-destructive w-5 h-5 flex-shrink-0 mt-0.5" />
-          <div>
-            <h4 className="text-destructive font-semibold text-sm">Action Needed</h4>
-            <p className="text-zinc-400 text-xs mt-0.5">{checkoutError}</p>
-          </div>
-        </div>
-      )}
-
       {/* Main Grid: Current Status + Usage Progress */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
+
         {/* Current Plan Information */}
         <Card className="lg:col-span-1 border-zinc-800/80 bg-[#0B0B14]">
           <div className="flex flex-col h-full justify-between space-y-6">
@@ -462,9 +323,6 @@ export default function BillingView() {
         plans={plans || []}
         currentPlanSlug={currentPlanSlug}
         billingCycle={billingCycle}
-        loadingRazorpay={loadingRazorpay}
-        activeCheckoutPlan={activeCheckoutPlan}
-        mockPaymentDetails={mockPaymentDetails}
         handleCheckout={handleCheckout}
       />
 
@@ -504,20 +362,21 @@ export default function BillingView() {
         onClose={() => setSelectedPreviewInvoice(null)}
       />
 
-      {/* Sandbox Simulator Modal */}
-      <SimulatedPaymentModal
-        isOpen={showMockPaymentModal}
-        mockPaymentDetails={mockPaymentDetails}
+      {/* ── Production Checkout Dialog ── */}
+      <CheckoutDialog
+        isOpen={checkoutDialogOpen}
+        plan={checkoutPlan}
         billingCycle={billingCycle}
-        onSuccess={handleSimulatePaymentSuccess}
-        onDecline={handleSimulatePaymentFailure}
-        onCancel={() => {
-          setShowMockPaymentModal(false);
-          setMockPaymentDetails(null);
+        initialAddress={address}
+        user={user as UserDto | null}
+        onClose={() => {
+          setCheckoutDialogOpen(false);
+          setCheckoutPlan(null);
         }}
+        onSuccess={handleCheckoutSuccess}
       />
 
-      {/* Confirmation Modal */}
+      {/* Confirmation Modal for Cancellation */}
       <ConfirmModal
         isOpen={showCancelSubModal}
         title="Cancel Subscription"
