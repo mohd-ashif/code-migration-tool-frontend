@@ -1,4 +1,3 @@
-import React from 'react';
 import { useAdminAuditLogs } from '../hooks/useAdmin';
 import { Skeleton } from '../../../components/ui/Skeleton';
 

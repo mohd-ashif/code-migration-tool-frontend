@@ -1,4 +1,3 @@
-import React from 'react';
 import { Key, Plus, Check, Copy, Cpu, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Button from '../../../components/ui/Button';
