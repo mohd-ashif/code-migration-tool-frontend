@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAdminFailures, useUpdateFailureGroup } from '../hooks/useAdminExtendedAnalytics';
 import { AlertTriangle } from 'lucide-react';
-import Skeleton from '../../../components/common/Skeleton';
+import Skeleton from '../../../components/ui/Skeleton';
 
 export const AdminFailuresPage: React.FC = () => {
   const { data: failures, isLoading } = useAdminFailures();

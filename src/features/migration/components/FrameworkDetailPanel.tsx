@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Globe, BookOpen, ExternalLink, X, ArrowRight, Lock, Terminal, RefreshCw } from 'lucide-react';
-import Badge from '../../../shared/components/Badge';
+import Badge from '../../../components/ui/Badge';
 import { useFrameworkDetail } from '../../../hooks/useFrameworks';
 import { useUpdateEngine } from '../../../hooks/useMigrationEngines';
 import { useUpdateCodemod, useUpdateCompilerSettings } from '../../../hooks/useCodemods';

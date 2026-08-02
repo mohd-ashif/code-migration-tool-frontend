@@ -7,6 +7,9 @@ import { setActiveTab, setSettingsSubTab, toggleMobileSidebar } from '../../stor
 import apiClient from '../../services/http/apiClient';
 import { RootState } from '../../store';
 import { useSubscription } from '../../hooks/useBilling';
+import Badge from '../../components/ui/Badge';
+import Avatar from '../../components/ui/Avatar';
+import Button from '../../components/ui/Button';
 
 export default function Topbar() {
   const dispatch = useAppDispatch();
@@ -25,11 +28,7 @@ export default function Topbar() {
   const isPro = planName.toLowerCase().includes('pro');
   const isEnterprise = planName.toLowerCase().includes('enterprise');
 
-  const planBadgeStyle = isEnterprise
-    ? 'text-purple-300 border-purple-500/40 bg-purple-500/15'
-    : isPro
-    ? 'text-[#9E8BFF] border-[#7C6CFF]/40 bg-[#7C6CFF]/15'
-    : 'text-zinc-400 border-zinc-700/50 bg-zinc-800/50';
+  const badgeVariant = isEnterprise ? 'primary' : isPro ? 'success' : 'secondary';
 
   const handleLogoutClick = async () => {
     try {
@@ -49,35 +48,30 @@ export default function Topbar() {
     setDropdownOpen(false);
   };
 
-  const userInitial = user?.fullName
-    ? user.fullName.charAt(0).toUpperCase()
-    : user?.email
-    ? user.email.charAt(0).toUpperCase()
-    : 'U';
   const userName = user?.fullName || (user?.email?.split('@')[0] ?? 'User');
 
   return (
-    <header className="h-16 border-b border-[#1E1F35] bg-darkBg/30 backdrop-blur-md sticky top-0 z-40 px-3 sm:px-6 lg:px-8 flex justify-between items-center select-none">
+    <header className="h-16 border-b border-border bg-darkBg/60 backdrop-blur-md sticky top-0 z-40 px-3 sm:px-6 lg:px-8 flex justify-between items-center select-none">
       {/* Left side: Mobile Toggle + Workspace Chip */}
       <div className="flex items-center gap-2">
         {/* Mobile Hamburger Drawer Trigger */}
-        <button
+        <Button
+          variant="icon"
+          size="sm"
           onClick={() => dispatch(toggleMobileSidebar())}
-          className="md:hidden p-2 text-gray-400 hover:text-white hover:bg-[#1E1F35] rounded-xl transition-all cursor-pointer"
-          aria-label="Toggle navigation drawer"
-          title="Toggle Navigation Menu"
-        >
-          <Menu className="w-5 h-5 text-gray-300" />
-        </button>
+          className="md:hidden"
+          tooltip="Toggle Navigation Menu"
+          iconOnly={<Menu className="w-5 h-5 text-zinc-300" />}
+        />
 
         {/* Workspace Chip */}
         {workspaceName && (
-          <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-primary/5 border border-primary/15 rounded-xl max-w-[180px] sm:max-w-none">
-            <Building2 className="w-3.5 h-3.5 text-primary/70 shrink-0" />
-            <span className="text-[11px] font-semibold text-primary/90 max-w-[100px] sm:max-w-[160px] truncate">{workspaceName}</span>
-            <span className={`text-[9px] sm:text-[10px] font-mono border rounded px-1.5 py-0.5 font-bold capitalize transition-all shrink-0 ${planBadgeStyle}`}>
+          <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-darkCard border border-border rounded-xl max-w-[180px] sm:max-w-none">
+            <Building2 className="w-3.5 h-3.5 text-primary shrink-0" />
+            <span className="text-xs font-semibold text-white max-w-[100px] sm:max-w-[160px] truncate">{workspaceName}</span>
+            <Badge variant={badgeVariant} size="sm">
               {planName}
-            </span>
+            </Badge>
           </div>
         )}
       </div>
@@ -93,59 +87,43 @@ export default function Topbar() {
               window.history.pushState({}, '', '/admin');
               window.dispatchEvent(new Event('popstate'));
             }}
-            className="px-2.5 sm:px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+            className="px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary-light border border-primary/30 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
             title="Open Admin Panel (/admin)"
           >
-            <Settings className="w-3.5 h-3.5 text-indigo-400" />
+            <Settings className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Admin Panel</span>
           </a>
         )}
 
         {/* Keyboard Shortcuts Trigger Button */}
-        <button
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => setIsHelpOpen(true)}
-          className="p-2 hover:bg-[#1E1F35] text-gray-400 hover:text-white rounded-xl border border-transparent hover:border-[#2B2C4E] transition-all cursor-pointer flex items-center gap-1.5 font-mono text-[10px]"
-          title="Open Keyboard Shortcuts Helper (F1)"
+          leftIcon={<Keyboard className="w-4 h-4 text-primary" />}
+          className="hidden sm:inline-flex"
         >
-          <Keyboard className="w-4 h-4 text-primary shrink-0" />
-          <span className="hidden sm:inline font-semibold">Shortcuts</span>
-          <kbd className="hidden md:inline-block px-1.5 py-0.5 bg-[#12131F] border border-border rounded text-[8px] font-bold">F1</kbd>
-        </button>
+          <span>Shortcuts</span>
+          <kbd className="ml-1 px-1.5 py-0.5 bg-darkInput border border-border rounded text-[10px] font-mono font-bold">F1</kbd>
+        </Button>
 
         {/* Profile Avatar with Dropdown */}
         <div className="relative">
-          <button
-            onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="w-8 h-8 rounded-full text-white flex items-center justify-center text-xs font-bold shadow-glow border border-[#7C6CFF]/30 cursor-pointer hover:scale-105 transition-all outline-none overflow-hidden"
-            style={{ background: user?.avatarUrl?.startsWith('linear-gradient') ? user.avatarUrl : 'linear-gradient(to top right, #7C6CFF, #A68CFF)' }}
-          >
-            {user?.avatarUrl?.startsWith('http') ? (
-              <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-            ) : (
-              userInitial
-            )}
-          </button>
+          <div onClick={() => setDropdownOpen(!dropdownOpen)} className="cursor-pointer">
+            <Avatar src={user?.avatarUrl?.startsWith('http') ? user.avatarUrl : undefined} name={userName} size="md" status="online" />
+          </div>
 
           {dropdownOpen && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
-              <div className="absolute right-0 mt-2.5 w-56 bg-[#12131F]/95 backdrop-blur-xl border border-white/10 rounded-2xl p-2 shadow-2xl z-50 text-xs text-left">
+              <div className="absolute right-0 mt-2.5 w-56 bg-darkPopover backdrop-blur-xl border border-border rounded-2xl p-2 shadow-dropdown z-50 text-xs text-left">
                 {/* Profile section */}
-                <div className="px-3 py-2.5 border-b border-white/5 mb-1">
+                <div className="px-3 py-2.5 border-b border-border/60 mb-1">
                   <div className="flex items-center gap-2.5">
-                    <div
-                      className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 overflow-hidden"
-                      style={{ background: user?.avatarUrl?.startsWith('linear-gradient') ? user.avatarUrl : 'linear-gradient(to top right, #7C6CFF, #A68CFF)' }}
-                    >
-                      {user?.avatarUrl?.startsWith('http') ? (
-                        <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                      ) : (
-                        userInitial
-                      )}
-                    </div>
+                    <Avatar src={user?.avatarUrl?.startsWith('http') ? user.avatarUrl : undefined} name={userName} size="sm" />
                     <div className="min-w-0">
-                      <p className="font-semibold text-white text-[11px] truncate">{userName}</p>
-                      <p className="text-zinc-500 text-[10px] truncate">{user?.email}</p>
+                      <p className="font-bold text-white text-xs truncate">{userName}</p>
+                      <p className="text-zinc-400 text-[10px] truncate">{user?.email}</p>
                     </div>
                   </div>
                 </div>
@@ -154,28 +132,28 @@ export default function Topbar() {
                 <div className="space-y-0.5 mb-1">
                   <button
                     onClick={() => navigateTo('settings', 'profile')}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-zinc-300 hover:bg-white/5 rounded-xl transition-all cursor-pointer font-medium text-[11px]"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-zinc-300 hover:bg-zinc-800/60 rounded-xl transition-all cursor-pointer font-medium text-xs"
                   >
                     <User className="w-3.5 h-3.5 text-zinc-400" />
                     Profile
                   </button>
                   <button
                     onClick={() => navigateTo('settings', 'api-keys')}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-zinc-300 hover:bg-white/5 rounded-xl transition-all cursor-pointer font-medium text-[11px]"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-zinc-300 hover:bg-zinc-800/60 rounded-xl transition-all cursor-pointer font-medium text-xs"
                   >
                     <Key className="w-3.5 h-3.5 text-zinc-400" />
                     API Keys
                   </button>
                   <button
                     onClick={() => navigateTo('billing')}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-zinc-300 hover:bg-white/5 rounded-xl transition-all cursor-pointer font-medium text-[11px]"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-zinc-300 hover:bg-zinc-800/60 rounded-xl transition-all cursor-pointer font-medium text-xs"
                   >
                     <Building2 className="w-3.5 h-3.5 text-zinc-400" />
                     Workspace
                   </button>
                   <button
                     onClick={() => navigateTo('settings', 'security')}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-zinc-300 hover:bg-white/5 rounded-xl transition-all cursor-pointer font-medium text-[11px]"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-zinc-300 hover:bg-zinc-800/60 rounded-xl transition-all cursor-pointer font-medium text-xs"
                   >
                     <Settings className="w-3.5 h-3.5 text-zinc-400" />
                     Settings
@@ -183,10 +161,10 @@ export default function Topbar() {
                 </div>
 
                 {/* Sign Out */}
-                <div className="border-t border-white/5 pt-1">
+                <div className="border-t border-border/60 pt-1">
                   <button
                     onClick={handleLogoutClick}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all cursor-pointer font-semibold text-[11px]"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-danger hover:bg-danger/10 rounded-xl transition-all cursor-pointer font-semibold text-xs"
                   >
                     <LogOut className="w-3.5 h-3.5" />
                     Sign Out

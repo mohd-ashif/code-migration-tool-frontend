@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAdminAuditLogs } from '../hooks/useAdmin';
-import { Skeleton } from '../../../components/common/Skeleton';
+import { Skeleton } from '../../../components/ui/Skeleton';
 
 export const AdminAuditLogsPage: React.FC = () => {
   const { data, isLoading } = useAdminAuditLogs();

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
-import Card from '../../../shared/components/Card';
-import Button from '../../../components/common/Button';
+import Card from '../../../components/ui/Card';
+import Button from '../../../components/ui/Button';
 import { defaultTransition } from '../../../animations/variants';
 
 interface PricingGridProps {

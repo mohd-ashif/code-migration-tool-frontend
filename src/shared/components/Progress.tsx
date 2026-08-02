@@ -1,5 +1,4 @@
 import { motion } from 'framer-motion';
-import { defaultTransition } from '../../animations/variants';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 
 interface ProgressProps {
@@ -15,12 +14,12 @@ export default function Progress({ value, max, size = 'md', className = '' }: Pr
   const isReduced = useReducedMotion();
 
   return (
-    <div className={`w-full bg-[#1A1B2E] rounded-full overflow-hidden ${height} ${className}`}>
+    <div className={`w-full bg-darkInput border border-border/40 rounded-full overflow-hidden ${height} ${className}`}>
       <motion.div
         initial={isReduced ? { width: `${percent}%` } : { width: 0 }}
         animate={{ width: `${percent}%` }}
-        transition={defaultTransition}
-        className="bg-gradient-to-r from-primary to-[#A68CFF] rounded-full h-full shadow-glow-sm"
+        transition={{ duration: 0.3, ease: 'easeOut' }}
+        className="bg-gradient-to-r from-primary to-secondary rounded-full h-full shadow-glow"
       />
     </div>
   );

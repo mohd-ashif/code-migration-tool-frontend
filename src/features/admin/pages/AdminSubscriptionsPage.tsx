@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAdminSubscriptions } from '../hooks/useAdmin';
-import { Skeleton } from '../../../components/common/Skeleton';
+import { Skeleton } from '../../../components/ui/Skeleton';
 
 export const AdminSubscriptionsPage: React.FC = () => {
   const { data, isLoading } = useAdminSubscriptions();

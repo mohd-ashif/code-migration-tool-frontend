@@ -1,4 +1,6 @@
+import React, { useState } from 'react';
 import { Users, Trash2 } from 'lucide-react';
+import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 
 interface WorkspaceMembersListProps {
   members: any[];
@@ -13,6 +15,22 @@ export default function WorkspaceMembersList({
   handleUpdateRole,
   handleRemoveMember,
 }: WorkspaceMembersListProps) {
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const promptDelete = (userId: string) => {
+    setSelectedUserId(userId);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirm = () => {
+    if (selectedUserId) {
+      handleRemoveMember(selectedUserId);
+    }
+    setConfirmOpen(false);
+    setSelectedUserId(null);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 border-b border-[#1E1F35] pb-3 mb-1">
@@ -61,7 +79,7 @@ export default function WorkspaceMembersList({
                       <select
                         value={member.role}
                         onChange={(e) => handleUpdateRole(member.userId, e.target.value)}
-                        className="bg-[#0B0B12] border border-[#1E1F35] text-zinc-300 text-[10px] font-bold rounded-lg px-2.5 py-1 focus:outline-none focus:border-primary"
+                        className="bg-[#0B0B12] border border-[#1E1F35] text-zinc-300 text-[10px] font-bold rounded-lg px-2.5 py-1 focus:outline-none focus:border-primary cursor-pointer"
                       >
                         <option value="admin">Admin</option>
                         <option value="developer">Developer</option>
@@ -72,7 +90,7 @@ export default function WorkspaceMembersList({
                   <td className="p-3.5 pr-5 text-right">
                     {!isMemberOwner && member.userId !== currentUser?.id && (
                       <button
-                        onClick={() => handleRemoveMember(member.userId)}
+                        onClick={() => promptDelete(member.userId)}
                         className="p-1.5 rounded-lg border border-[#1E1F35] hover:border-rose-500/20 text-zinc-500 hover:text-rose-400 hover:bg-rose-500/5 transition-all cursor-pointer"
                         title="Remove user"
                       >
@@ -86,6 +104,17 @@ export default function WorkspaceMembersList({
           </tbody>
         </table>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmOpen}
+        title="Remove Teammate from Workspace?"
+        message="Are you sure you want to remove this member from the workspace? They will immediately lose access to all migration jobs, reports, and workspace settings."
+        confirmLabel="Remove Teammate"
+        cancelLabel="Cancel"
+        isDestructive={true}
+        onConfirm={handleConfirm}
+        onClose={() => setConfirmOpen(false)}
+      />
     </div>
   );
 }

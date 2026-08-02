@@ -166,7 +166,11 @@ export default function Sidebar() {
                   <strong className="text-success font-bold">{usage?.jobCount ?? 0}</strong> / {usage?.totalMigrations ?? 100}
                 </span>
               </div>
-              <Progress value={usage?.jobCount ?? 0} max={usage?.totalMigrations ?? 100} size="sm" />
+              <Progress
+                value={(usage?.totalMigrations as any) === 'Unlimited' ? 5 : (usage?.jobCount ?? 0)}
+                max={typeof usage?.totalMigrations === 'number' ? usage.totalMigrations : 100}
+                size="sm"
+              />
             </div>
           </div>
         )}

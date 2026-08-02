@@ -1,6 +1,6 @@
 import React from 'react';
-import Card from '../../../shared/components/Card';
-import Badge from '../../../shared/components/Badge';
+import Card from '../../../components/ui/Card';
+import Badge from '../../../components/ui/Badge';
 import { FrameworkDto } from '../../../shared/types/framework.types';
 import { Code, Globe, Activity, Shield, Cpu, Sliders, FileCode, Database, Layers, Zap } from 'lucide-react';
 

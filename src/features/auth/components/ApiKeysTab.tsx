@@ -1,7 +1,7 @@
 import React from 'react';
 import { Key, Plus, Check, Copy, Cpu, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Button from '../../../components/common/Button';
+import Button from '../../../components/ui/Button';
 
 interface ApiKeysTabProps {
   newApiKeyName: string;

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import Card from '../../../shared/components/Card';
-import Badge from '../../../shared/components/Badge';
+import Card from '../../../components/ui/Card';
+import Badge from '../../../components/ui/Badge';
 import { Download, Eye, Loader2 } from 'lucide-react';
 import { downloadInvoicePdf } from '../../../utils/downloadHelper';
 

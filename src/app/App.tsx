@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from '../shared/components/Sidebar';
 import Topbar from '../shared/components/Topbar';
 import PageHeader from '../shared/components/PageHeader';
-import EmptyState from '../shared/components/EmptyState';
+import EmptyState from '../components/ui/EmptyState';
 import { Network, Loader2, FileCode2, WifiOff } from 'lucide-react';
 
 import { useAppDispatch, useAppSelector, RootState } from '../store';
@@ -47,7 +47,7 @@ import { QueryProvider, queryClient } from './providers/QueryProvider';
 import { ErrorBoundary } from './providers/ErrorBoundary';
 import { ThemeProvider, useTheme } from '../lib/ThemeContext';
 import { fadeIn, defaultTransition } from '../animations/variants';
-import { ToastProvider } from '../components/common/Toast';
+import { ToastProvider } from '../components/ui/Toast';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useOffline } from '../hooks/useOffline';
@@ -345,7 +345,7 @@ function AppContent() {
           return (
             <div className="py-16 max-w-xl mx-auto">
               <EmptyState
-                icon={Network}
+                icon={<Network className="w-8 h-8 text-primary" />}
                 title="No Active Dependency Graph"
                 description="Please select a completed migration job from the dashboard or history list to load and inspect its symbol dependency graph."
               >

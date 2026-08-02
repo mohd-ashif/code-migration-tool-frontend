@@ -6,12 +6,12 @@ import { useAppDispatch } from '../../../store';
 import { setSelectedJobId } from '../../../store/slices/workspaceSlice';
 import { setActiveTab } from '../../../store/slices/uiSlice';
 import { JobRecord } from '../../../shared/types/api.types';
-import Card from '../../../shared/components/Card';
+import Card from '../../../components/ui/Card';
 import { staggerContainer, slideUp } from '../../../animations/variants';
 import { useReducedMotion } from '../../../hooks/useReducedMotion';
 import apiClient from '../../../services/http/apiClient';
 import { useQueryClient } from '@tanstack/react-query';
-import ConfirmDialog from '../../../shared/components/ConfirmDialog';
+import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import { toast } from '../../../services/toast/toast.service';
 
 const PAGE_SIZE = 15;

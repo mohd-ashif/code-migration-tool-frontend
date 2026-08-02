@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAdminAnalytics } from '../hooks/useAdmin';
 import { TrendingUp, PieChart } from 'lucide-react';
-import { Skeleton } from '../../../components/common/Skeleton';
+import { Skeleton } from '../../../components/ui/Skeleton';
 
 export const AdminAnalyticsPage: React.FC = () => {
   const [days, setDays] = useState(30);

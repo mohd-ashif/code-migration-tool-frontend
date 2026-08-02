@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import Card from '../../../shared/components/Card';
-import Button from '../../../components/common/Button';
+import Card from '../../../components/ui/Card';
+import Button from '../../../components/ui/Button';
 import { Play, Pause, RotateCcw, XCircle, Terminal, Wifi, WifiOff, Loader2, PlusCircle, CheckCircle2 } from 'lucide-react';
 import { useWebSocket } from '../../../hooks/useWebSocket';
 import apiClient from '../../../services/http/apiClient';
 
 import { toast } from '../../../services/toast/toast.service';
-import ConfirmModal from '../../../components/common/ConfirmModal';
+import ConfirmModal from '../../../components/ui/ConfirmDialog';
 
 interface LiveMigrationTrackerProps {
   jobId: string;

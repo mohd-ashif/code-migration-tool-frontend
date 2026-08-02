@@ -1,14 +1,16 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useAppDispatch } from '../../../store';
 import { setAuthView } from '../../../store/slices/authSlice';
 import apiClient from '../../../services/http/apiClient';
-import { Lock, Mail, Loader2, Check } from 'lucide-react';
+import { Lock, Mail, Loader2, Check, Eye, EyeOff } from 'lucide-react';
 
 export default function RegisterForm() {
   const dispatch = useAppDispatch();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -60,11 +62,10 @@ export default function RegisterForm() {
           We've sent a verification link to <span className="text-white font-medium">{email}</span>. Please click the link to activate your account.
         </p>
         <button
-          type="button"
           onClick={() => dispatch(setAuthView('login'))}
-          className="w-full bg-[#1A1B2D] border border-white/5 hover:bg-[#25263D] text-white font-semibold text-xs rounded-2xl py-3.5 transition-all cursor-pointer"
+          className="text-[#7C6CFF] text-xs font-bold hover:underline cursor-pointer"
         >
-          Back to Sign In
+          Return to Sign In
         </button>
       </div>
     );
@@ -99,16 +100,25 @@ export default function RegisterForm() {
         <label className="text-zinc-400 text-[11px] font-semibold tracking-wider uppercase">
           Password
         </label>
-        <div className="relative">
-          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-zinc-500" />
+        <div className="relative flex items-center">
+          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-zinc-500 pointer-events-none" />
           <input
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-[#1A1B2D]/40 border border-white/5 focus:border-[#7C6CFF]/80 focus:ring-1 focus:ring-[#7C6CFF]/30 rounded-2xl py-3.5 pl-12 pr-4 text-sm text-white placeholder-zinc-500 outline-none transition-all"
+            className="w-full bg-[#1A1B2D]/40 border border-white/5 focus:border-[#7C6CFF]/80 focus:ring-1 focus:ring-[#7C6CFF]/30 rounded-2xl py-3.5 pl-12 pr-11 text-sm text-white placeholder-zinc-500 outline-none transition-all"
             placeholder="••••••••"
           />
+          <button
+            type="button"
+            onClick={() => setShowPassword((prev) => !prev)}
+            className="absolute right-4 text-zinc-400 hover:text-white transition-colors cursor-pointer p-1"
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            title={showPassword ? 'Hide password' : 'Show password'}
+          >
+            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
         </div>
       </div>
 
@@ -116,16 +126,25 @@ export default function RegisterForm() {
         <label className="text-zinc-400 text-[11px] font-semibold tracking-wider uppercase">
           Confirm Password
         </label>
-        <div className="relative">
-          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-zinc-500" />
+        <div className="relative flex items-center">
+          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-zinc-500 pointer-events-none" />
           <input
-            type="password"
+            type={showConfirmPassword ? 'text' : 'password'}
             required
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full bg-[#1A1B2D]/40 border border-white/5 focus:border-[#7C6CFF]/80 focus:ring-1 focus:ring-[#7C6CFF]/30 rounded-2xl py-3.5 pl-12 pr-4 text-sm text-white placeholder-zinc-500 outline-none transition-all"
+            className="w-full bg-[#1A1B2D]/40 border border-white/5 focus:border-[#7C6CFF]/80 focus:ring-1 focus:ring-[#7C6CFF]/30 rounded-2xl py-3.5 pl-12 pr-11 text-sm text-white placeholder-zinc-500 outline-none transition-all"
             placeholder="••••••••"
           />
+          <button
+            type="button"
+            onClick={() => setShowConfirmPassword((prev) => !prev)}
+            className="absolute right-4 text-zinc-400 hover:text-white transition-colors cursor-pointer p-1"
+            aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+            title={showConfirmPassword ? 'Hide password' : 'Show password'}
+          >
+            {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
         </div>
       </div>
 
@@ -138,21 +157,30 @@ export default function RegisterForm() {
                 key={index}
                 className={`h-1.5 flex-1 rounded-full transition-all ${
                   index <= strengthCount
-                    ? strengthCount === 4
-                      ? 'bg-emerald-500'
-                      : strengthCount >= 2
+                    ? strengthCount <= 2
                       ? 'bg-amber-500'
-                      : 'bg-rose-500'
-                    : 'bg-white/5'
+                      : strengthCount === 3
+                      ? 'bg-blue-500'
+                      : 'bg-emerald-500'
+                    : 'bg-white/10'
                 }`}
               />
             ))}
           </div>
-          <div className="text-[10px] text-zinc-500 flex flex-wrap gap-x-3 gap-y-1">
-            <span className={hasMinLength ? 'text-emerald-500/80' : ''}>Min 8 chars</span>
-            <span className={hasUpper ? 'text-emerald-500/80' : ''}>1 Uppercase</span>
-            <span className={hasLower ? 'text-emerald-500/80' : ''}>1 Lowercase</span>
-            <span className={hasNumber ? 'text-emerald-500/80' : ''}>1 Number</span>
+
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-zinc-400 font-mono">
+            <span className={hasMinLength ? 'text-emerald-400 font-bold' : ''}>
+              • 8+ characters
+            </span>
+            <span className={hasUpper ? 'text-emerald-400 font-bold' : ''}>
+              • Uppercase letter
+            </span>
+            <span className={hasLower ? 'text-emerald-400 font-bold' : ''}>
+              • Lowercase letter
+            </span>
+            <span className={hasNumber ? 'text-emerald-400 font-bold' : ''}>
+              • Number (0-9)
+            </span>
           </div>
         </div>
       )}
@@ -160,15 +188,15 @@ export default function RegisterForm() {
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-gradient-to-r from-[#7C6CFF] to-[#6351FF] hover:opacity-95 disabled:opacity-50 text-white font-semibold text-sm rounded-2xl py-4 shadow-lg shadow-[#7C6CFF]/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
+        className="w-full bg-gradient-to-r from-[#7C6CFF] to-[#6351FF] hover:opacity-95 disabled:opacity-50 text-white font-semibold text-sm rounded-2xl py-4 shadow-lg shadow-[#7C6CFF]/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2 mt-4 cursor-pointer"
       >
         {loading ? (
           <>
             <Loader2 className="w-4 h-4 animate-spin" />
-            Creating account...
+            Creating Account...
           </>
         ) : (
-          'Register'
+          'Create Account'
         )}
       </button>
 
@@ -211,14 +239,14 @@ export default function RegisterForm() {
         </button>
       </div>
 
-      <div className="text-center pt-3 text-xs text-zinc-400">
+      <div className="text-center pt-2 text-xs text-zinc-400">
         Already have an account?{' '}
         <button
           type="button"
           onClick={() => dispatch(setAuthView('login'))}
-          className="text-[#7C6CFF] font-bold hover:underline"
+          className="text-[#7C6CFF] font-bold hover:underline cursor-pointer"
         >
-          Sign In
+          Sign in
         </button>
       </div>
     </form>

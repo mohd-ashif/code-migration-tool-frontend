@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAdminReports } from '../hooks/useAdmin';
 import { Download } from 'lucide-react';
-import { Skeleton } from '../../../components/common/Skeleton';
+import { Skeleton } from '../../../components/ui/Skeleton';
 
 export const AdminReportsPage: React.FC = () => {
   const { data, isLoading } = useAdminReports();

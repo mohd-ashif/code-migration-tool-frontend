@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAdminMigrationQuality } from '../hooks/useAdminExtendedAnalytics';
 import { Award, Cpu } from 'lucide-react';
-import Skeleton from '../../../components/common/Skeleton';
+import Skeleton from '../../../components/ui/Skeleton';
 
 export const AdminMigrationQualityPage: React.FC = () => {
   const { data: qualityData, isLoading } = useAdminMigrationQuality();

@@ -1,6 +1,6 @@
 import { ShieldCheck } from 'lucide-react';
-import Card from '../../../shared/components/Card';
-import Button from '../../../components/common/Button';
+import Card from '../../../components/ui/Card';
+import Button from '../../../components/ui/Button';
 import { SubscriptionAddress } from '../../../hooks/useBilling';
 import { toast } from '../../../services/toast/toast.service';
 

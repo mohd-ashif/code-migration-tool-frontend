@@ -3,8 +3,8 @@ import { Upload, FileCode, CheckCircle, AlertCircle, ArrowLeft, Folder } from 'l
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUpload } from '../hooks/useUpload';
 import { API_KEY } from '../../../services/http/apiClient';
-import Card from '../../../shared/components/Card';
-import Button from '../../../shared/components/Button';
+import Card from '../../../components/ui/Card';
+import Button from '../../../components/ui/Button';
 import { useAppDispatch } from '../../../store';
 import { setSelectedJobId } from '../../../store/slices/workspaceSlice';
 import { ParsedFile } from '../../../shared/types/api.types';

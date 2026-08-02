@@ -1,5 +1,5 @@
 import { User, Globe } from 'lucide-react';
-import Button from '../../../components/common/Button';
+import Button from '../../../components/ui/Button';
 
 const avatarPresets = [
   'linear-gradient(135deg, #7C6CFF 0%, #A68CFF 100%)',

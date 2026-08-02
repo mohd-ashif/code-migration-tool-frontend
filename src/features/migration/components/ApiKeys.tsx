@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import Card from '../../../shared/components/Card';
-import Button from '../../../shared/components/Button';
+import Card from '../../../components/ui/Card';
+import Button from '../../../components/ui/Button';
 import PageHeader from '../../../shared/components/PageHeader';
 import { Key, Eye, EyeOff, Save, CheckCircle2 } from 'lucide-react';
 

@@ -2,9 +2,10 @@ import { useState, useCallback } from 'react';
 import { Node, Edge, useReactFlow } from 'reactflow';
 import { GraphNodeData, GraphEdgeData, LayoutMode } from '../types/graph';
 import { applyLayout } from '../utils/layout';
+import { useLocalStorage } from '../../../hooks/useLocalStorage';
 
 export function useGraphLayout() {
-  const [layoutMode, setLayoutMode] = useState<LayoutMode>('LR');
+  const [layoutMode, setLayoutMode] = useLocalStorage<LayoutMode>('graph_layout_mode', 'LR');
   const [isApplying, setIsApplying] = useState(false);
   const { setNodes } = useReactFlow();
 

@@ -29,11 +29,15 @@ export function useWorkspaceSettings() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Danger zone modals connected to Redux
+  // Modals
   const deleteConfirmOpen = useAppSelector((state: RootState) => state.workspace.isDeleteDialogOpen);
   const setDeleteConfirmOpen = (open: boolean) => dispatch(setDeleteDialogOpen(open));
   const [transferOwnerId, setTransferOwnerId] = useState('');
   const [transferConfirmOpen, setTransferConfirmOpen] = useState(false);
+
+  // Member removal modal
+  const [removeMemberId, setRemoveMemberId] = useState<string | null>(null);
+  const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (currentWorkspaceId) {
@@ -131,14 +135,23 @@ export function useWorkspaceSettings() {
     }
   };
 
-  const handleRemoveMember = async (memberUserId: string) => {
+  const promptRemoveMember = (memberUserId: string) => {
+    setRemoveMemberId(memberUserId);
+    setRemoveConfirmOpen(true);
+  };
+
+  const handleConfirmRemoveMember = async () => {
+    if (!removeMemberId) return;
     setError(null);
     try {
-      await apiClient.delete(`/api/workspace/${currentWorkspaceId}/members/${memberUserId}`);
+      await apiClient.delete(`/api/workspace/${currentWorkspaceId}/members/${removeMemberId}`);
       setSuccess('Member removed from workspace.');
       fetchMembersAndInvites();
     } catch (err: any) {
       setError(err.message || 'Failed to remove member.');
+    } finally {
+      setRemoveConfirmOpen(false);
+      setRemoveMemberId(null);
     }
   };
 
@@ -198,11 +211,15 @@ export function useWorkspaceSettings() {
     setTransferOwnerId,
     transferConfirmOpen,
     setTransferConfirmOpen,
+    removeConfirmOpen,
+    setRemoveConfirmOpen,
+    promptRemoveMember,
+    handleConfirmRemoveMember,
     handleUpdateWorkspace,
     handleSendInvite,
     handleCancelInvite,
     handleUpdateRole,
-    handleRemoveMember,
+    handleRemoveMember: promptRemoveMember,
     handleTransferOwnership,
     handleDeleteWorkspace,
     colorPresets,

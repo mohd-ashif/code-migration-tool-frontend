@@ -1,5 +1,5 @@
 import { Info, AlertTriangle, CheckCircle2, FileText, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
-import Button from '../../../shared/components/Button';
+import Button from '../../../components/ui/Button';
 import { useAppDispatch, useAppSelector } from '../../../store';
 import { clearNodeDetails } from '../../../store/slices/graphSlice';
 import { NODE_STYLES } from '../utils/nodeStyles';

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAdminJobs, useRetryAdminJob, useCancelAdminJob } from '../hooks/useAdmin';
 import { Search, RotateCcw, XCircle } from 'lucide-react';
-import { Skeleton } from '../../../components/common/Skeleton';
+import { Skeleton } from '../../../components/ui/Skeleton';
 
 export const AdminJobsPage: React.FC = () => {
   const [search, setSearch] = useState('');
