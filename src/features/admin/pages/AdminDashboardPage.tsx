@@ -13,7 +13,7 @@ import {
   Activity,
   AlertTriangle
 } from 'lucide-react';
-import { Skeleton } from '../../../components/common/Skeleton';
+import { Skeleton } from '../../../components/ui/Skeleton';
 
 export const AdminDashboardPage: React.FC = () => {
   const { data, isLoading, error } = useAdminDashboard();

@@ -17,7 +17,7 @@ import {
   Plus,
   Zap,
 } from 'lucide-react';
-import Skeleton from '../../../components/common/Skeleton';
+import Skeleton from '../../../components/ui/Skeleton';
 
 export const AdminBillingOpsPage: React.FC = () => {
   const { data: opsData, isLoading } = useAdminBillingOps();

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAdminLogs } from '../hooks/useAdmin';
-import { Skeleton } from '../../../components/common/Skeleton';
+import { Skeleton } from '../../../components/ui/Skeleton';
 
 export const AdminLogsPage: React.FC = () => {
   const [levelFilter, setLevelFilter] = useState('');

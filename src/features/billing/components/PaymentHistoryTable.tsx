@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import Card from '../../../shared/components/Card';
-import Badge from '../../../shared/components/Badge';
-import Button from '../../../components/common/Button';
+import Card from '../../../components/ui/Card';
+import Badge from '../../../components/ui/Badge';
+import Button from '../../../components/ui/Button';
+import ConfirmModal from '../../../components/ui/ConfirmDialog';
 import { Search, Download, RefreshCw, RotateCcw, Loader2 } from 'lucide-react';
 import { usePayments, useRetryPayment, useRefund } from '../../../hooks/useBilling';
 import { downloadInvoicePdf } from '../../../utils/downloadHelper';
 import { toast } from '../../../services/toast/toast.service';
-import ConfirmModal from '../../../components/common/ConfirmModal';
 
 export default function PaymentHistoryTable() {
   const [searchTerm, setSearchTerm] = useState('');

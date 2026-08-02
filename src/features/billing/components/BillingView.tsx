@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Sparkles, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { useAppSelector } from '../../../store';
-import Card from '../../../shared/components/Card';
-import Badge from '../../../shared/components/Badge';
+import Card from '../../../components/ui/Card';
+import Badge from '../../../components/ui/Badge';
 import Progress from '../../../shared/components/Progress';
-import Button from '../../../components/common/Button';
+import Button from '../../../components/ui/Button';
 import {
   usePlans,
   useSubscription,
@@ -24,7 +24,7 @@ import PaymentHistoryTable from './PaymentHistoryTable';
 import SimulatedPaymentModal from './SimulatedPaymentModal';
 import EnterpriseInvoicePreview from './EnterpriseInvoicePreview';
 import { toast } from '../../../services/toast/toast.service';
-import ConfirmModal from '../../../components/common/ConfirmModal';
+import ConfirmModal from '../../../components/ui/ConfirmDialog';
 
 export default function BillingView() {
   const workspaceId = useAppSelector((state) => state.workspace.currentWorkspaceId);

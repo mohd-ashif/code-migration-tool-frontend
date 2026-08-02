@@ -1,5 +1,5 @@
 import { ShieldAlert } from 'lucide-react';
-import ConfirmDialog from '../../../components/common/ConfirmDialog';
+import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 
 interface WorkspaceDangerZoneProps {
   isOwner: boolean;

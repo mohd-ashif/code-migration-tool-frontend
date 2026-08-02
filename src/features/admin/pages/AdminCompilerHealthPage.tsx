@@ -1,7 +1,7 @@
 import React from 'react';
 import { useCompilerHealth } from '../hooks/useAdmin';
 import { Activity, Cpu, Server, Database, Layers } from 'lucide-react';
-import { Skeleton } from '../../../components/common/Skeleton';
+import { Skeleton } from '../../../components/ui/Skeleton';
 
 export const AdminCompilerHealthPage: React.FC = () => {
   const { data, isLoading } = useCompilerHealth();

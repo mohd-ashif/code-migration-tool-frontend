@@ -3,7 +3,7 @@ import {
   Globe,
   Settings
 } from 'lucide-react';
-import Button from '../../../components/common/Button';
+import Button from '../../../components/ui/Button';
 
 // Hook
 import { useWorkspaceSettings } from '../hooks/useWorkspaceSettings';

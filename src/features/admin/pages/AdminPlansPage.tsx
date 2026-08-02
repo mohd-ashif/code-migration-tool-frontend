@@ -9,8 +9,8 @@ import {
   AdminPlan,
 } from '../hooks/useAdminPlans';
 import { Plus, Copy, Archive, CheckCircle2, XCircle, Sparkles, Layers } from 'lucide-react';
-import Skeleton from '../../../components/common/Skeleton';
-import ConfirmDialog from '../../../components/common/ConfirmDialog';
+import Skeleton from '../../../components/ui/Skeleton';
+import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 
 export const AdminPlansPage: React.FC = () => {
   const { data: plans, isLoading } = useAdminPlans();

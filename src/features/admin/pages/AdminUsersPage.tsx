@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useAdminUsers, useSuspendUser, useReactivateUser } from '../hooks/useAdmin';
 import { Search, UserX, UserCheck, Shield } from 'lucide-react';
-import { Skeleton } from '../../../components/common/Skeleton';
-import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
+import { Skeleton } from '../../../components/ui/Skeleton';
+import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 
 export const AdminUsersPage: React.FC = () => {
   const [search, setSearch] = useState('');

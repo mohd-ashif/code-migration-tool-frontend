@@ -1,7 +1,7 @@
 import React from 'react';
 import { useFeatureFlags, useSaveFeatureFlag } from '../hooks/useAdmin';
 import { Flag, ToggleLeft, ToggleRight } from 'lucide-react';
-import { Skeleton } from '../../../components/common/Skeleton';
+import { Skeleton } from '../../../components/ui/Skeleton';
 
 export const AdminFeatureFlagsPage: React.FC = () => {
   const { data: flags, isLoading } = useFeatureFlags();

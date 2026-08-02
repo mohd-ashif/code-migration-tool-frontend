@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAdminWorkspaces, useSuspendWorkspace, useReactivateWorkspace } from '../hooks/useAdmin';
 import { Search, Ban, CheckCircle } from 'lucide-react';
-import { Skeleton } from '../../../components/common/Skeleton';
+import { Skeleton } from '../../../components/ui/Skeleton';
 
 export const AdminWorkspacesPage: React.FC = () => {
   const [search, setSearch] = useState('');

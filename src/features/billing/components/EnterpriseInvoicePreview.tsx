@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Download, Printer, X, ShieldCheck, CheckCircle2, QrCode, FileText, Loader2, Check } from 'lucide-react';
-import Button from '../../../components/common/Button';
+import Button from '../../../components/ui/Button';
 import { downloadInvoicePdf } from '../../../utils/downloadHelper';
 
 interface EnterpriseInvoicePreviewProps {

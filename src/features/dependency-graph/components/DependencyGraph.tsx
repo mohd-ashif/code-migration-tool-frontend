@@ -16,7 +16,7 @@ import GraphCanvas from './GraphCanvas';
 import FiltersPanel from './FiltersPanel';
 import StatisticsPanel from './StatisticsPanel';
 import InspectorPanel from './InspectorPanel';
-import EmptyState from '../../../shared/components/EmptyState';
+import EmptyState from '../../../components/ui/EmptyState';
 import { Network, ShieldAlert, RotateCcw } from 'lucide-react';
 import PageHeader from '../../../shared/components/PageHeader';
 import { motion } from 'framer-motion';
@@ -150,7 +150,7 @@ function DependencyGraphInner() {
   if (!jobId) {
     return (
       <EmptyState
-        icon={Network}
+        icon={<Network className="w-8 h-8 text-primary" />}
         title="No Migration Job Selected"
         description="Select a completed migration job to visualize its dependency graph."
       />
@@ -247,7 +247,7 @@ function DependencyGraphInner() {
           ) : visibleNodes.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <EmptyState
-                icon={Network}
+                icon={<Network className="w-8 h-8 text-primary" />}
                 title="No Nodes to Display"
                 description="Adjust your filters or select a different migration job."
               />

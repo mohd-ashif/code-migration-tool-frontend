@@ -19,8 +19,8 @@ import {
   RotateCcw,
   LogOut,
 } from 'lucide-react';
-import Skeleton from '../../../components/common/Skeleton';
-import ConfirmDialog from '../../../components/common/ConfirmDialog';
+import Skeleton from '../../../components/ui/Skeleton';
+import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 
 interface AdminUser360PageProps {
   userId: string;

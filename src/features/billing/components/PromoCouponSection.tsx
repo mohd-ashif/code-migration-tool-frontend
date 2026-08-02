@@ -1,6 +1,6 @@
 import { Percent } from 'lucide-react';
-import Card from '../../../shared/components/Card';
-import Button from '../../../components/common/Button';
+import Card from '../../../components/ui/Card';
+import Button from '../../../components/ui/Button';
 
 interface PromoCouponSectionProps {
   couponCode: string;

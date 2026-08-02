@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useAdminPayments, useRefundPayment } from '../hooks/useAdmin';
 import { RefreshCcw } from 'lucide-react';
-import { Skeleton } from '../../../components/common/Skeleton';
-import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
+import { Skeleton } from '../../../components/ui/Skeleton';
+import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 
 export const AdminPaymentsPage: React.FC = () => {
   const { data, isLoading } = useAdminPayments();

@@ -5,11 +5,11 @@ import { useAppSelector } from '../../../store';
 import { useJob } from '../../jobs/hooks/useJob';
 import { useMigrationReport } from '../hooks/useMigrationReport';
 import { getDownloadUrl } from '../../jobs/api';
-import Card from '../../../shared/components/Card';
-import Button from '../../../shared/components/Button';
-import Badge from '../../../shared/components/Badge';
+import Card from '../../../components/ui/Card';
+import Button from '../../../components/ui/Button';
+import Badge from '../../../components/ui/Badge';
 import Progress from '../../../shared/components/Progress';
-import Skeleton from '../../../shared/components/Skeleton';
+import Skeleton from '../../../components/ui/Skeleton';
 import AnimatedCounter from '../../../shared/components/AnimatedCounter';
 import { fadeIn, defaultTransition } from '../../../animations/variants';
 

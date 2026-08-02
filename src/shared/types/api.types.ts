@@ -46,8 +46,8 @@ export interface WorkspaceMemberDto {
 
 export interface UsageDto {
   jobCount: number;
-  storageUsedMB: number;
+  storageUsedMB?: number;
   remainingMigrations: number;
-  totalMigrations?: number;
+  totalMigrations?: number | string;
 }
 

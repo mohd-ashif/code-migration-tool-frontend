@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { useAppDispatch } from '../../../store';
 import { setCredentials, setAuthView } from '../../../store/slices/authSlice';
 import apiClient from '../../../services/http/apiClient';
-import { Lock, Mail, Loader2, Key, Check } from 'lucide-react';
+import { Lock, Mail, Loader2, Key, Check, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginForm() {
   const dispatch = useAppDispatch();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -114,21 +115,30 @@ export default function LoginForm() {
             <button
               type="button"
               onClick={() => dispatch(setAuthView('forgot-password'))}
-              className="text-[#7C6CFF] text-[11px] font-bold hover:underline"
+              className="text-[#7C6CFF] text-[11px] font-bold hover:underline cursor-pointer"
             >
               Forgot Password?
             </button>
           </div>
-          <div className="relative">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-zinc-500" />
+          <div className="relative flex items-center">
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-zinc-500 pointer-events-none" />
             <input
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-[#1A1B2D]/40 border border-white/5 focus:border-[#7C6CFF]/80 focus:ring-1 focus:ring-[#7C6CFF]/30 rounded-2xl py-3.5 pl-12 pr-4 text-sm text-white placeholder-zinc-500 outline-none transition-all"
+              className="w-full bg-[#1A1B2D]/40 border border-white/5 focus:border-[#7C6CFF]/80 focus:ring-1 focus:ring-[#7C6CFF]/30 rounded-2xl py-3.5 pl-12 pr-11 text-sm text-white placeholder-zinc-500 outline-none transition-all"
               placeholder="••••••••"
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="absolute right-4 text-zinc-400 hover:text-white transition-colors cursor-pointer p-1"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              title={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
           </div>
         </div>
       )}
@@ -148,7 +158,7 @@ export default function LoginForm() {
           <button
             type="button"
             onClick={() => setIsMagicLink(true)}
-            className="text-[#7C6CFF] text-xs font-bold hover:underline flex items-center gap-1"
+            className="text-[#7C6CFF] text-xs font-bold hover:underline flex items-center gap-1 cursor-pointer"
           >
             <Key className="w-3.5 h-3.5" />
             Sign in with Magic Link
@@ -161,7 +171,7 @@ export default function LoginForm() {
           <button
             type="button"
             onClick={() => setIsMagicLink(false)}
-            className="text-[#7C6CFF] text-xs font-bold hover:underline"
+            className="text-[#7C6CFF] text-xs font-bold hover:underline cursor-pointer"
           >
             Sign in with password
           </button>
@@ -227,7 +237,7 @@ export default function LoginForm() {
         <button
           type="button"
           onClick={() => dispatch(setAuthView('register'))}
-          className="text-[#7C6CFF] font-bold hover:underline"
+          className="text-[#7C6CFF] font-bold hover:underline cursor-pointer"
         >
           Create one now
         </button>

@@ -4,7 +4,7 @@ import { useRecentJobs } from '../../jobs/hooks/useRecentJobs';
 import { useAppDispatch } from '../../../store';
 import { setSelectedJobId } from '../../../store/slices/workspaceSlice';
 import { setActiveTab } from '../../../store/slices/uiSlice';
-import Card from '../../../shared/components/Card';
+import Card from '../../../components/ui/Card';
 import { staggerContainer, slideUp } from '../../../animations/variants';
 import { useReducedMotion } from '../../../hooks/useReducedMotion';
 

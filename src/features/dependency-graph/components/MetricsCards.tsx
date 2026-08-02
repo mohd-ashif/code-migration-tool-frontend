@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import Card from '../../../shared/components/Card';
+import Card from '../../../components/ui/Card';
 import AnimatedCounter from '../../../shared/components/AnimatedCounter';
 import { staggerContainer, slideUp } from '../../../animations/variants';
 

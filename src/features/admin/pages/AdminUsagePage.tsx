@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAdminUsage, useCreateQuotaOverride } from '../hooks/useAdminExtendedAnalytics';
 import { AlertTriangle, Plus, ShieldCheck, Activity } from 'lucide-react';
-import Skeleton from '../../../components/common/Skeleton';
+import Skeleton from '../../../components/ui/Skeleton';
 
 export const AdminUsagePage: React.FC = () => {
   const { data: usageData, isLoading } = useAdminUsage();

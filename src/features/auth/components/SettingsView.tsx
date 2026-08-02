@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '../../../store';
 import { setSettingsSubTab } from '../../../store/slices/uiSlice';
-import Card from '../../../shared/components/Card';
+import Card from '../../../components/ui/Card';
 import PageHeader from '../../../shared/components/PageHeader';
-import ConfirmDialog from '../../../components/common/ConfirmDialog';
+import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 import {
   User,
   Shield,
