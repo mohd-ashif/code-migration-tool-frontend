@@ -4,7 +4,7 @@ import { X, ShieldCheck, CreditCard, Zap } from 'lucide-react';
 import { useCheckout, useBilling, SubscriptionAddress } from '../../../../hooks/useBilling';
 import { toast } from '../../../../services/toast/toast.service';
 
-import { CheckoutDialogProps, CheckoutStep, PaymentStatus, CouponInfo, Plan } from './checkout.types';
+import { CheckoutDialogProps, CheckoutStep, PaymentStatus, CouponInfo } from './checkout.types';
 import { IS_DEV, loadRazorpayScript } from './checkout.helpers';
 import { StepIndicator }  from './components/StepIndicator';
 import { DevSandboxModal } from './components/DevSandboxModal';
