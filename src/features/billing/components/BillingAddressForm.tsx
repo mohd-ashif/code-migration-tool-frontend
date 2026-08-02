@@ -2,6 +2,7 @@ import { ShieldCheck } from 'lucide-react';
 import Card from '../../../shared/components/Card';
 import Button from '../../../components/common/Button';
 import { SubscriptionAddress } from '../../../hooks/useBilling';
+import { toast } from '../../../services/toast/toast.service';
 
 const INDIAN_STATES = [
   'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 'Haryana',
@@ -27,14 +28,15 @@ export default function BillingAddressForm({
 }: BillingAddressFormProps) {
   const handleSave = async () => {
     if (!address.addressLine1 || !address.city || !address.state || !address.pinCode) {
-      alert('Address, City, State and PIN Code are required.');
+      toast.warning('Address, City, State and PIN Code are required.');
       return;
     }
     try {
       await saveAddress.mutateAsync(address);
       setAddressSaved(true);
+      toast.success('Billing details saved successfully.');
     } catch (err) {
-      alert('Failed to save billing details to server.');
+      toast.error('Failed to save billing details to server.');
     }
   };
 

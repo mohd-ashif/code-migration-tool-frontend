@@ -25,9 +25,10 @@ const STATUS_COLORS: Record<string, { dot: string; badge: string }> = {
 };
 
 function StatusIcon({ status }: { status: string }) {
-  if (status === 'completed') return <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />;
-  if (status === 'failed') return <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />;
-  if (status === 'cancelled') return <XCircle className="w-3.5 h-3.5 text-zinc-500" />;
+  const norm = status?.toLowerCase();
+  if (norm === 'completed') return <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />;
+  if (norm === 'failed') return <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />;
+  if (norm === 'cancelled') return <XCircle className="w-3.5 h-3.5 text-zinc-500" />;
   return <Clock className="w-3.5 h-3.5 text-amber-400 animate-pulse" />;
 }
 
@@ -199,7 +200,8 @@ export default function MigrationHistory() {
               {jobs.map((job) => {
                 const source = job.request?.sourceFramework ?? job.result?.sourceFramework;
                 const target = job.request?.targetFramework ?? job.result?.targetFramework;
-                const statusColor = STATUS_COLORS[job.status] ?? STATUS_COLORS['pending'];
+                const normStatus = job.status?.toLowerCase() || 'pending';
+                const statusColor = STATUS_COLORS[normStatus] ?? STATUS_COLORS['pending'];
 
                 return (
                   <div key={job.id}>
@@ -241,7 +243,7 @@ export default function MigrationHistory() {
 
                       {/* Actions */}
                       <div className="flex items-center gap-1 justify-end">
-                        {job.status === 'completed' && (
+                        {normStatus === 'completed' && (
                           <a
                             href={`/api/download?jobId=${job.id}`}
                             target="_blank"
@@ -252,7 +254,7 @@ export default function MigrationHistory() {
                             <Download className="w-3.5 h-3.5" />
                           </a>
                         )}
-                        {(job.status === 'failed' || job.status === 'cancelled') && (
+                        {(normStatus === 'failed' || normStatus === 'cancelled') && (
                           <button
                             onClick={() => handleRetry(job)}
                             className="p-1.5 text-zinc-500 hover:text-amber-400 hover:bg-amber-400/10 rounded-lg transition-all"

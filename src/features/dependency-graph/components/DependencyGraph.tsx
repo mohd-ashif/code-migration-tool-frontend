@@ -17,13 +17,16 @@ import FiltersPanel from './FiltersPanel';
 import StatisticsPanel from './StatisticsPanel';
 import InspectorPanel from './InspectorPanel';
 import EmptyState from '../../../shared/components/EmptyState';
-import { Network } from 'lucide-react';
+import { Network, ShieldAlert, RotateCcw } from 'lucide-react';
 import PageHeader from '../../../shared/components/PageHeader';
 import { motion } from 'framer-motion';
 import { fadeIn } from '../../../animations/variants';
 import ShortcutContext from '../../../shortcuts/shortcutContext';
 import { useContext } from 'react';
 import { useGraphShortcut } from '../../../shortcuts/hooks/useGraphShortcut';
+import { setActiveTab } from '../../../store/slices/uiSlice';
+import { setSelectedJobId } from '../../../store/slices/workspaceSlice';
+import { useRecentJobs } from '../../jobs/hooks/useRecentJobs';
 
 // ── Inner component: needs ReactFlow provider to use hooks ──────────────────
 function DependencyGraphInner() {
@@ -32,7 +35,18 @@ function DependencyGraphInner() {
   const { selectedNode, search, page } = useAppSelector(state => state.graph);
 
   const limit = 24;
-  const { data, isLoading, refetch } = useDependencyGraph(jobId, page, limit, search);
+  const { jobs: recentJobs } = useRecentJobs();
+  const { data, isLoading, error, refetch } = useDependencyGraph(jobId, page, limit, search);
+
+  // Auto-select latest completed job if none is currently selected
+  useEffect(() => {
+    if (!jobId && recentJobs && recentJobs.length > 0) {
+      const latest = recentJobs.find((j: any) => j.status?.toLowerCase() === 'completed') || recentJobs[0];
+      if (latest) {
+        dispatch(setSelectedJobId(latest.id));
+      }
+    }
+  }, [jobId, recentJobs, dispatch]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<GraphNodeData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<GraphEdgeData>([]);
@@ -193,6 +207,41 @@ function DependencyGraphInner() {
               <div className="flex flex-col items-center gap-4">
                 <div className="w-12 h-12 rounded-full border-2 border-primary border-t-transparent animate-spin" />
                 <span className="text-xs font-mono text-gray-500">Building dependency graph...</span>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="flex items-center justify-center h-full p-6 text-center">
+              <div className="max-w-md bg-[#0D0E1A] border border-rose-500/20 rounded-2xl p-6 shadow-2xl space-y-4">
+                <div className="p-3 bg-rose-500/10 text-rose-400 rounded-xl w-fit mx-auto border border-rose-500/20">
+                  <ShieldAlert className="w-8 h-8" />
+                </div>
+                <div className="space-y-1.5">
+                  <h3 className="text-sm font-bold text-white">
+                    {((error as any)?.response?.status === 403 || (error as any)?.response?.data?.message?.includes('Access denied'))
+                      ? 'Feature Plan Restriction'
+                      : 'Unable to Load Dependency Graph'}
+                  </h3>
+                  <p className="text-xs text-zinc-400 leading-relaxed">
+                    {(error as any)?.response?.data?.message || (error as any)?.message || 'An unexpected error occurred while fetching graph analysis.'}
+                  </p>
+                </div>
+                <div className="pt-2 flex justify-center gap-3">
+                  {((error as any)?.response?.status === 403 || (error as any)?.response?.data?.message?.includes('Access denied')) ? (
+                    <button
+                      onClick={() => dispatch(setActiveTab('billing'))}
+                      className="px-4 py-2 bg-primary hover:bg-[#8D7EFF] text-white text-xs font-bold rounded-xl transition-all shadow-glow"
+                    >
+                      Upgrade Subscription Plan
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => refetch()}
+                      className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold rounded-xl transition-all inline-flex items-center gap-1.5"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" /> Retry Request
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ) : visibleNodes.length === 0 ? (

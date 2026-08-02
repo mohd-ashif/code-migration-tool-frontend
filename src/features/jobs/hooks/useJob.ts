@@ -12,7 +12,8 @@ export function useJob(jobId: string | null) {
     refetchInterval: (queryData: any) => {
       const jobData = queryData.state.data?.job;
       if (!jobData) return false;
-      const inProgress = jobData.status === 'pending' || jobData.status === 'processing';
+      const status = jobData.status?.toLowerCase();
+      const inProgress = status === 'pending' || status === 'processing' || status === 'migrating' || status === 'queued';
       return inProgress ? 2000 : false; // Poll every 2 seconds if pending/processing
     },
     select: (data: any) => data.job || null,
@@ -22,7 +23,8 @@ export function useJob(jobId: string | null) {
 
   // Invalidate the jobs list when the job is no longer running to show the correct status
   useEffect(() => {
-    if (job && (job.status === 'completed' || job.status === 'failed' || job.status === 'cancelled')) {
+    const status = job?.status?.toLowerCase();
+    if (job && (status === 'completed' || status === 'failed' || status === 'cancelled')) {
       queryClient.invalidateQueries({ queryKey: ['recentJobs'] });
     }
   }, [job?.status, queryClient]);

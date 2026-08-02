@@ -74,7 +74,8 @@ function parseReportDetails(summaryText: string) {
 const JobDetails = React.memo(function JobDetails() {
   const jobId = useAppSelector((state) => state.workspace.selectedJobId);
   const { job } = useJob(jobId);
-  const { report, isLoading: isLoadingReport } = useMigrationReport(jobId, job?.status === 'completed');
+  const isCompleted = job?.status?.toLowerCase() === 'completed';
+  const { report, isLoading: isLoadingReport } = useMigrationReport(jobId, isCompleted);
 
   const [showFiles, setShowFiles] = useState(true);
   const [showRawReport, setShowRawReport] = useState(false);
@@ -148,7 +149,8 @@ const JobDetails = React.memo(function JobDetails() {
 
   const migratedFiles = job.result?.migratedFiles || [];
   const parsedDetails = report ? parseReportDetails(report.summary) : null;
-  const isInProgress = job.status === 'pending' || job.status === 'processing';
+  const normStatus = job?.status?.toLowerCase() || '';
+  const isInProgress = normStatus === 'pending' || normStatus === 'processing' || normStatus === 'migrating' || normStatus === 'queued';
 
   return (
     <Card className="space-y-6">
@@ -162,7 +164,7 @@ const JobDetails = React.memo(function JobDetails() {
             {job.id}
           </h2>
         </div>
-        {job.status === 'completed' && (
+        {isCompleted && (
           <Button
             variant="primary"
             size="sm"
@@ -179,7 +181,7 @@ const JobDetails = React.memo(function JobDetails() {
       <div className="p-4 bg-card border border-border rounded-xl space-y-3.5 select-none font-mono text-xs">
         <div className="flex justify-between items-center">
           <span className="text-muted-foreground">Status:</span>
-          <Badge status={job.status} />
+          <Badge status={job?.status || 'pending'} />
         </div>
 
         {job.result?.targetFramework && (
@@ -195,7 +197,7 @@ const JobDetails = React.memo(function JobDetails() {
           <div className="border-t border-border pt-3.5 space-y-2">
             <div className="flex justify-between text-[11px] font-mono">
               <span className="text-muted-foreground">
-                {job.status === 'pending' ? 'Queuing job...' : 'Migrating AST files...'}
+                {normStatus === 'pending' ? 'Queuing job...' : 'Migrating AST files...'}
               </span>
               <AnimatedCounter value={job.progress || 0} suffix="%" className="text-primary font-bold animate-pulse" />
             </div>
