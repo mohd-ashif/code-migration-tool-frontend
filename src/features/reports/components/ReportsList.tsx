@@ -13,8 +13,8 @@ export default function ReportsList() {
   const isReduced = useReducedMotion();
   const { jobs, isLoading } = useRecentJobs();
 
-  // Reports are jobs with a completed status that have results
-  const reports = jobs.filter((j: any) => j.status === 'completed' && j.result);
+  // Reports are jobs with a completed status
+  const reports = jobs.filter((j: any) => j.status?.toLowerCase() === 'completed');
 
   const handleView = (jobId: string) => {
     dispatch(setSelectedJobId(jobId));

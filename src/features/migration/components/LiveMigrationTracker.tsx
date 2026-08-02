@@ -1,9 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import Card from '../../../shared/components/Card';
 import Button from '../../../components/common/Button';
-import { Play, Pause, RotateCcw, XCircle, Terminal, Wifi, WifiOff, Loader2 } from 'lucide-react';
+import { Play, Pause, RotateCcw, XCircle, Terminal, Wifi, WifiOff, Loader2, PlusCircle, CheckCircle2 } from 'lucide-react';
 import { useWebSocket } from '../../../hooks/useWebSocket';
 import apiClient from '../../../services/http/apiClient';
+
+import { toast } from '../../../services/toast/toast.service';
+import ConfirmModal from '../../../components/common/ConfirmModal';
 
 interface LiveMigrationTrackerProps {
   jobId: string;
@@ -20,8 +24,11 @@ export default function LiveMigrationTracker({
   onCancel,
   onComplete,
 }: LiveMigrationTrackerProps) {
+  const queryClient = useQueryClient();
   const { isConnected, lastMessage, logs } = useWebSocket(jobId);
   const [isPausing, setIsPausing] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const currentProgress = lastMessage?.progress ?? initialProgress;
   const currentStage = lastMessage?.stage ?? initialStage;
@@ -29,6 +36,13 @@ export default function LiveMigrationTracker({
   const isPaused = lastMessage?.type === 'paused';
   const isCompleted = lastMessage?.type === 'complete' || currentProgress === 100;
   const isFailed = lastMessage?.type === 'failed';
+
+  useEffect(() => {
+    if (isCompleted || isFailed) {
+      queryClient.invalidateQueries({ queryKey: ['job', jobId] });
+      queryClient.invalidateQueries({ queryKey: ['recentJobs'] });
+    }
+  }, [isCompleted, isFailed, jobId, queryClient]);
 
   if (isCompleted && lastMessage?.data && onComplete) {
     onComplete(lastMessage.data);
@@ -38,8 +52,9 @@ export default function LiveMigrationTracker({
     setIsPausing(true);
     try {
       await apiClient.post(`/api/jobs/${jobId}/pause`);
+      toast.info('Migration task paused.');
     } catch (err: any) {
-      alert(err.message || 'Failed to pause job.');
+      toast.error(err.message || 'Failed to pause job.');
     } finally {
       setIsPausing(false);
     }
@@ -49,29 +64,38 @@ export default function LiveMigrationTracker({
     setIsPausing(true);
     try {
       await apiClient.post(`/api/jobs/${jobId}/resume`);
+      toast.success('Migration task resumed.');
     } catch (err: any) {
-      alert(err.message || 'Failed to resume job.');
+      toast.error(err.message || 'Failed to resume job.');
     } finally {
       setIsPausing(false);
     }
   };
 
-  const handleCancelJob = async () => {
-    if (window.confirm('Are you sure you want to cancel this migration task?')) {
-      try {
-        await apiClient.post(`/api/jobs/${jobId}/cancel`);
-        onCancel?.();
-      } catch (err: any) {
-        alert(err.message || 'Failed to cancel job.');
-      }
+  const handleCancelJob = () => {
+    setShowCancelModal(true);
+  };
+
+  const confirmCancelJob = async () => {
+    setIsCancelling(true);
+    try {
+      await apiClient.post(`/api/jobs/${jobId}/cancel`);
+      toast.success('Migration task cancelled.');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to cancel job.');
+    } finally {
+      setIsCancelling(false);
+      setShowCancelModal(false);
+      onCancel?.();
     }
   };
 
   const handleRetryJob = async () => {
     try {
       await apiClient.post(`/api/jobs/${jobId}/retry`);
+      toast.info('Retrying migration task...');
     } catch (err: any) {
-      alert(err.message || 'Failed to retry job.');
+      toast.error(err.message || 'Failed to retry job.');
     }
   };
 
@@ -97,6 +121,15 @@ export default function LiveMigrationTracker({
 
         {/* Action Controls */}
         <div className="flex items-center gap-2">
+          {isCompleted && (
+            <Button
+              onClick={() => onCancel?.()}
+              className="bg-primary hover:bg-primary/90 text-white text-xs px-3.5 py-1.5 font-bold shadow-glow"
+            >
+              <PlusCircle className="w-3.5 h-3.5 mr-1.5" /> Start New Migration
+            </Button>
+          )}
+
           {!isCompleted && !isFailed && (
             isPaused ? (
               <Button
@@ -133,7 +166,28 @@ export default function LiveMigrationTracker({
       </div>
 
       {/* Progress Bar & Readouts */}
-      <div className="space-y-2">
+      <div className="space-y-3">
+        {isCompleted && (
+          <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-xl p-3.5 flex items-center justify-between gap-3 animate-fade-in">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg shrink-0">
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-white leading-tight">Migration Task Completed!</p>
+                <p className="text-[11px] text-zinc-400">AST transformations finished successfully. Ready for next project.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => onCancel?.()}
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition-all shadow-glow shrink-0 cursor-pointer"
+            >
+              Upload Next Project →
+            </button>
+          </div>
+        )}
+
         <div className="flex justify-between items-center text-xs">
           <span className="font-semibold text-white capitalize">{currentStage}</span>
           <span className="font-mono text-primary font-bold">{currentProgress}%</span>
@@ -176,6 +230,19 @@ export default function LiveMigrationTracker({
           )}
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showCancelModal}
+        title="Cancel Migration Task"
+        message="Are you sure you want to cancel this migration task? Unsaved progress will be terminated."
+        confirmText="Yes, Cancel Task"
+        cancelText="Keep Running"
+        variant="danger"
+        loading={isCancelling}
+        onConfirm={confirmCancelJob}
+        onClose={() => setShowCancelModal(false)}
+      />
     </Card>
   );
 }

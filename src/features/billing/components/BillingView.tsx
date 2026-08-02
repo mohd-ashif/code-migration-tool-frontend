@@ -23,6 +23,8 @@ import InvoicesList from './InvoicesList';
 import PaymentHistoryTable from './PaymentHistoryTable';
 import SimulatedPaymentModal from './SimulatedPaymentModal';
 import EnterpriseInvoicePreview from './EnterpriseInvoicePreview';
+import { toast } from '../../../services/toast/toast.service';
+import ConfirmModal from '../../../components/common/ConfirmModal';
 
 export default function BillingView() {
   const workspaceId = useAppSelector((state) => state.workspace.currentWorkspaceId);
@@ -249,23 +251,34 @@ export default function BillingView() {
     }
   };
 
-  const handleCancelSub = async () => {
-    if (window.confirm('Are you sure you want to cancel your subscription? It will remain active until the end of the billing period.')) {
-      try {
-        await cancelSubscription.mutateAsync();
-        refetchSub();
-      } catch (err) {
-        alert('Failed to cancel subscription.');
-      }
+  const [showCancelSubModal, setShowCancelSubModal] = useState(false);
+  const [isCancellingSub, setIsCancellingSub] = useState(false);
+
+  const handleCancelSubClick = () => {
+    setShowCancelSubModal(true);
+  };
+
+  const confirmCancelSub = async () => {
+    setIsCancellingSub(true);
+    try {
+      await cancelSubscription.mutateAsync();
+      toast.success('Subscription cancelled. It will remain active until the end of the billing period.');
+      setShowCancelSubModal(false);
+      refetchSub();
+    } catch (err: any) {
+      toast.error('Failed to cancel subscription.');
+    } finally {
+      setIsCancellingSub(false);
     }
   };
 
   const handleResumeSub = async () => {
     try {
       await resumeSubscription.mutateAsync();
+      toast.success('Subscription resumed successfully.');
       refetchSub();
     } catch (err) {
-      alert('Failed to resume subscription.');
+      toast.error('Failed to resume subscription.');
     }
   };
 
@@ -380,7 +393,7 @@ export default function BillingView() {
                   </Button>
                 ) : (
                   <Button
-                    onClick={handleCancelSub}
+                    onClick={handleCancelSubClick}
                     variant="danger"
                     className="w-full py-2.5 bg-destructive/10 hover:bg-destructive/15 border border-destructive/20 text-destructive rounded-xl text-xs font-bold"
                   >
@@ -502,6 +515,19 @@ export default function BillingView() {
           setShowMockPaymentModal(false);
           setMockPaymentDetails(null);
         }}
+      />
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showCancelSubModal}
+        title="Cancel Subscription"
+        message="Are you sure you want to cancel your subscription? It will remain active until the end of your current billing period."
+        confirmText="Yes, Cancel Subscription"
+        cancelText="Keep Subscription"
+        variant="danger"
+        loading={isCancellingSub}
+        onConfirm={confirmCancelSub}
+        onClose={() => setShowCancelSubModal(false)}
       />
 
     </div>

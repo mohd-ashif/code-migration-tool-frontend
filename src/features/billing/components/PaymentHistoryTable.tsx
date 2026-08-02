@@ -5,12 +5,16 @@ import Button from '../../../components/common/Button';
 import { Search, Download, RefreshCw, RotateCcw, Loader2 } from 'lucide-react';
 import { usePayments, useRetryPayment, useRefund } from '../../../hooks/useBilling';
 import { downloadInvoicePdf } from '../../../utils/downloadHelper';
+import { toast } from '../../../services/toast/toast.service';
+import ConfirmModal from '../../../components/common/ConfirmModal';
 
 export default function PaymentHistoryTable() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [selectedRefundId, setSelectedRefundId] = useState<string | null>(null);
+  const [isRefunding, setIsRefunding] = useState(false);
   const limit = 5;
 
   const { data, isLoading, refetch } = usePayments({
@@ -26,22 +30,29 @@ export default function PaymentHistoryTable() {
   const handleRetry = async (paymentId: string) => {
     try {
       await retryMutation.mutateAsync(paymentId);
-      alert('Payment retry initiated.');
+      toast.success('Payment retry initiated.');
       refetch();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to retry payment.');
+      toast.error(err.response?.data?.message || 'Failed to retry payment.');
     }
   };
 
-  const handleRefund = async (paymentId: string) => {
-    if (window.confirm('Are you sure you want to request a refund for this payment?')) {
-      try {
-        await refundMutation.mutateAsync({ paymentId, reason: 'Customer requested refund' });
-        alert('Refund request processed.');
-        refetch();
-      } catch (err: any) {
-        alert(err.response?.data?.message || 'Failed to process refund.');
-      }
+  const handleRefundClick = (paymentId: string) => {
+    setSelectedRefundId(paymentId);
+  };
+
+  const confirmRefund = async () => {
+    if (!selectedRefundId) return;
+    setIsRefunding(true);
+    try {
+      await refundMutation.mutateAsync({ paymentId: selectedRefundId, reason: 'Customer requested refund' });
+      toast.success('Refund request processed.');
+      setSelectedRefundId(null);
+      refetch();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to process refund.');
+    } finally {
+      setIsRefunding(false);
     }
   };
 
@@ -173,7 +184,7 @@ export default function PaymentHistoryTable() {
                       </Button>
                     ) : p.status === 'captured' ? (
                       <Button
-                        onClick={() => handleRefund(p.id)}
+                        onClick={() => handleRefundClick(p.id)}
                         variant="ghost"
                         className="px-2 py-1 text-[11px] text-zinc-400 hover:text-destructive font-bold"
                       >
@@ -220,6 +231,19 @@ export default function PaymentHistoryTable() {
           </div>
         </div>
       )}
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(selectedRefundId)}
+        title="Request Refund"
+        message="Are you sure you want to request a refund for this payment? This action will process a credit back to your account."
+        confirmText="Confirm Refund"
+        cancelText="Keep Payment"
+        variant="warning"
+        loading={isRefunding}
+        onConfirm={confirmRefund}
+        onClose={() => setSelectedRefundId(null)}
+      />
     </Card>
   );
 }
